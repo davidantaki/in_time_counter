@@ -265,7 +265,6 @@ void rtc_counter() {
     old_time_remaining_sec = time_remaining_sec;
     ms_left = 1000;
     time_remaining_sec_change_time_ms = millis();
-    serialUSB.printf("here\r\n");
   } else {
     ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
     // Clamp ms_left to (0,1000)
