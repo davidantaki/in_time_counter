@@ -294,59 +294,63 @@ void rtc_counter() {
     To get ASCII number of a digit just add the digit to '0' char.
   */
   char output_str[16]; // Output display is 16 characters long.
+  output_str[0] = '0';
+  output_str[1] = '0';
+  int output_str_i = 2;
 
   // Format years
   if (yrs_left < 10) {
-    output_str[0] = '0' + 0;
-    output_str[1] = '0' + yrs_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + yrs_left;
   } else {
-    output_str[0] = '0' + yrs_left / 10;
-    output_str[1] = '0' + yrs_left % 10;
+    output_str[output_str_i++] = '0' + yrs_left / 10;
+    output_str[output_str_i++] = '0' + yrs_left % 10;
   }
 
   // Format weeks
   if (wks_left < 10) {
-    output_str[2] = '0' + 0;
-    output_str[3] = '0' + wks_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + wks_left;
   } else {
-    output_str[2] = '0' + wks_left / 10;
-    output_str[3] = '0' + wks_left % 10;
+    output_str[output_str_i++] = '0' + wks_left / 10;
+    output_str[output_str_i++] = '0' + wks_left % 10;
   }
 
   // Format days
   // Days should always be <7days. We already asserted this above.
-  output_str[4] = '0' + 0;
-  output_str[5] = '0' + days_left;
+  output_str[output_str_i++] = '0' + 0;
+  output_str[output_str_i++] = '0' + days_left;
 
   // Format hours
   if (hrs_left < 10) {
-    output_str[6] = '0' + 0;
-    output_str[7] = '0' + hrs_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + hrs_left;
   } else {
-    output_str[6] = '0' + hrs_left / 10;
-    output_str[7] = '0' + hrs_left % 10;
+    output_str[output_str_i++] = '0' + hrs_left / 10;
+    output_str[output_str_i++] = '0' + hrs_left % 10;
   }
   // Format minutes
   if (mins_left < 10) {
-    output_str[8] = '0' + 0;
-    output_str[9] = '0' + mins_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + mins_left;
   } else {
-    output_str[8] = '0' + mins_left / 10;
-    output_str[9] = '0' + mins_left % 10;
+    output_str[output_str_i++] = '0' + mins_left / 10;
+    output_str[output_str_i++] = '0' + mins_left % 10;
   }
   // Format seconds
   if (sec_left < 10) {
-    output_str[10] = '0' + 0;
-    output_str[11] = '0' + sec_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + sec_left;
   } else {
-    output_str[10] = '0' + sec_left / 10;
-    output_str[11] = '0' + sec_left % 10;
+    output_str[output_str_i++] = '0' + sec_left / 10;
+    output_str[output_str_i++] = '0' + sec_left % 10;
   }
 
   // Update display
   display.printf(output_str);
-  // display.printf("%d%d%d%d%d%d", yrs_left, wks_left, days_left, hrs_left,
-  //                mins_left, sec_left);
+  if (!display.colonOn()) {
+    Error_Handler();
+  }
 
   // Print for debugging purposes
   if (millis() - last_print_time > 1000) {
@@ -407,28 +411,35 @@ void set_datetime(int year, int month, int date, int hr, int min, int sec) {
 }
 
 void init_display() {
-  // display.initialize();
-  serialUSB.printf("George is Cool\r\n");
+
+  serialUSB.printf("Running init_display()...\r\n");
   while (display.begin(0x70, 0x71, 0x72, 0x73, i2c1_bus) == false) {
     serialUSB.printf("Display did not acknowledge!\r\n");
     delay(1000);
   }
   serialUSB.printf("Display acknowledged.\r\n");
 
-  display.printf("JOHN IS SO HOT");
-  // display.setBlinkRate(1);
-  display.setBrightness(1);
-  display.colonOn();
-  // display.decimalOn();
+  if (!display.initialize()) {
+    Error_Handler();
+  }
+  if (!display.clear()) {
+    Error_Handler();
+  }
+  if (!display.setBrightness(1)) {
+    Error_Handler();
+  }
+  if (!display.colonOn()) {
+    Error_Handler();
+  }
   // current_draw_test();
-  display.clear();
+  display.printf("JOHN IS SO HOT");
 }
 
 void setup() {
   // put your setup code here, to run once:
   serialUSB.begin(115200);
   i2c1_bus.begin();
-  
+
   init_display();
 
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
