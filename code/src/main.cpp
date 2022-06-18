@@ -6,6 +6,7 @@ TwoWire i2c1_bus(PB7, PB6);
 HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(i2c1_bus);
+uint32_t old_time_remaining_sec = 0;
 
 // Birth Day
 int birth_yr = 2000;
@@ -346,8 +347,13 @@ void rtc_counter() {
     output_str[output_str_i++] = '0' + sec_left % 10;
   }
 
-  // Update display
-  display.printf(output_str);
+  // Update display only if the remaining time changed so that we aren't
+  // constantly updating the display. i.e. only update diplay when we need to.
+  if (time_remaining_sec != old_time_remaining_sec) {
+    display.printf(output_str);
+    old_time_remaining_sec = time_remaining_sec;
+  }
+
   if (!display.colonOn()) {
     Error_Handler();
   }
