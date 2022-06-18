@@ -184,7 +184,8 @@ uint32_t get_sec_since_epoch(uint32_t yr, uint32_t mo, uint32_t day,
  * @brief Counter using a real time clock.
  */
 void rtc_counter() {
-  static int last_print_time;
+  static int last_serialUSB_print_time;
+  static int time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
 
   // Calculate expected death date
@@ -250,6 +251,18 @@ void rtc_counter() {
   // ASSERT(sec_left<60)
   if (!(sec_left < 60)) {
     Error_Handler();
+  }
+  uint32_t ms_left;
+  // Basically, reset ms_left when sec_left has changed.
+  if (time_remaining_sec != old_time_remaining_sec) {
+    old_time_remaining_sec = time_remaining_sec;
+    ms_left = 1000;
+    time_remaining_sec_change_time_ms = millis();
+    serialUSB.printf("here\r\n");
+  } else {
+    ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
+    // Clamp ms_left to (0,1000)
+    ms_left = ms_left < 0 ? 0 : ms_left;
   }
 
   // Format output string
@@ -318,21 +331,30 @@ void rtc_counter() {
     output_str[output_str_i++] = '0' + sec_left / 10;
     output_str[output_str_i++] = '0' + sec_left % 10;
   }
+  // Format milliseconds
+  int ms_left_div_10 = ms_left / 10;
+  if (ms_left_div_10 < 10) {
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + ms_left_div_10;
+  } else {
+    output_str[output_str_i++] = '0' + ms_left_div_10 / 10;
+    output_str[output_str_i++] = '0' + ms_left_div_10 % 10;
+  }
 
   // Update display only if the remaining time changed so that we aren't
   // constantly updating the display. i.e. only update diplay when we need to.
-  if (time_remaining_sec != old_time_remaining_sec) {
-    display.printf(output_str);
-    old_time_remaining_sec = time_remaining_sec;
-  }
+  // if (time_remaining_sec != old_time_remaining_sec) {
+  //   display.printf(output_str);
+  //   old_time_remaining_sec = time_remaining_sec;
+  // }
 
-  if (!display.colonOn()) {
-    Error_Handler();
-  }
+  // Update millisecond segments seperately
+  display.printf(output_str);
+  display.colonOn();
 
   // Print for debugging purposes
-  if (millis() - last_print_time > 1000) {
-    last_print_time = millis();
+  if (millis() - last_serialUSB_print_time > 1000) {
+    last_serialUSB_print_time = millis();
     // Display time remaining in your life
     serialUSB.printf("death_time_since_epoch_sec: %u\r\n",
                      death_time_since_epoch_sec);
@@ -349,8 +371,9 @@ void rtc_counter() {
 
     serialUSB.printf(
         "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
-        "%u min_left: %u sec_left: %u\r\n",
-        millis(), yrs_left, wks_left, days_left, hrs_left, mins_left, sec_left);
+        "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
+        millis(), yrs_left, wks_left, days_left, hrs_left, mins_left, sec_left,
+        ms_left_div_10);
 
     serialUSB.printf("Output String: %s\r\n", output_str);
   }
@@ -419,7 +442,12 @@ void setup() {
   i2c1_bus.begin();
 
   init_display();
-
+  // display.clear();
+  // display.illuminateChar(1, 1);
+  // // display.printChar(1, 1);
+  // display.updateDisplay();
+  // while (1) {
+  // }
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
   rtc.enable32kHz(false);
