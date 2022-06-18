@@ -288,63 +288,62 @@ void rtc_counter() {
   char output_str[16]; // Output display is 16 characters long.
   output_str[0] = '0';
   output_str[1] = '0';
-  int output_str_i = 2;
 
   // Format years
   if (yrs_left < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + yrs_left;
+    output_str[2] = '0' + 0;
+    output_str[3] = '0' + yrs_left;
   } else {
-    output_str[output_str_i++] = '0' + yrs_left / 10;
-    output_str[output_str_i++] = '0' + yrs_left % 10;
+    output_str[2] = '0' + yrs_left / 10;
+    output_str[3] = '0' + yrs_left % 10;
   }
 
   // Format weeks
   if (wks_left < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + wks_left;
+    output_str[4] = '0' + 0;
+    output_str[5] = '0' + wks_left;
   } else {
-    output_str[output_str_i++] = '0' + wks_left / 10;
-    output_str[output_str_i++] = '0' + wks_left % 10;
+    output_str[4] = '0' + wks_left / 10;
+    output_str[5] = '0' + wks_left % 10;
   }
 
   // Format days
   // Days should always be <7days. We already asserted this above.
-  output_str[output_str_i++] = '0' + 0;
-  output_str[output_str_i++] = '0' + days_left;
+  output_str[6] = '0' + 0;
+  output_str[7] = '0' + days_left;
 
   // Format hours
   if (hrs_left < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + hrs_left;
+    output_str[8] = '0' + 0;
+    output_str[9] = '0' + hrs_left;
   } else {
-    output_str[output_str_i++] = '0' + hrs_left / 10;
-    output_str[output_str_i++] = '0' + hrs_left % 10;
+    output_str[8] = '0' + hrs_left / 10;
+    output_str[9] = '0' + hrs_left % 10;
   }
   // Format minutes
   if (mins_left < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + mins_left;
+    output_str[10] = '0' + 0;
+    output_str[11] = '0' + mins_left;
   } else {
-    output_str[output_str_i++] = '0' + mins_left / 10;
-    output_str[output_str_i++] = '0' + mins_left % 10;
+    output_str[10] = '0' + mins_left / 10;
+    output_str[11] = '0' + mins_left % 10;
   }
   // Format seconds
   if (sec_left < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + sec_left;
+    output_str[12] = '0' + 0;
+    output_str[13] = '0' + sec_left;
   } else {
-    output_str[output_str_i++] = '0' + sec_left / 10;
-    output_str[output_str_i++] = '0' + sec_left % 10;
+    output_str[12] = '0' + sec_left / 10;
+    output_str[13] = '0' + sec_left % 10;
   }
   // Format milliseconds
   int ms_left_div_10 = ms_left / 10;
   if (ms_left_div_10 < 10) {
-    output_str[output_str_i++] = '0' + 0;
-    output_str[output_str_i++] = '0' + ms_left_div_10;
+    output_str[14] = '0' + 0;
+    output_str[15] = '0' + ms_left_div_10;
   } else {
-    output_str[output_str_i++] = '0' + ms_left_div_10 / 10;
-    output_str[output_str_i++] = '0' + ms_left_div_10 % 10;
+    output_str[14] = '0' + ms_left_div_10 / 10;
+    output_str[15] = '0' + ms_left_div_10 % 10;
   }
 
   // Update display only if the remaining time changed so that we aren't
@@ -465,7 +464,7 @@ void setup() {
   delay(1000);
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
-  set_datetime(2022, 6, 18, 15, 15, 0);
+  // set_datetime(2022, 6, 18, 19, 15, 0);
 }
 
 void displayFakeColon(uint8_t digit) {
