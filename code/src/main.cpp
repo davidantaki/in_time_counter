@@ -400,7 +400,7 @@ void print_rtc_date_and_time() {
   byte sec = rtc.getSecond();
   byte date = rtc.getDate();
 
-  serialUSB.printf("RTC: yr: %d mo: %d date: %d hr: %d min: %d sec: %d 12hr: "
+  serialUSB.printf("RTC: %d/%d/%d %d:%d:%d 12hr: "
                    "0x%X pm_time: 0x%X\r\n",
                    yr + 1970, mo, date, hr, min, sec, h12, pm_time);
 }
