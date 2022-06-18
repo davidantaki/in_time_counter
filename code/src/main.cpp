@@ -6,7 +6,6 @@ TwoWire i2c1_bus(PB7, PB6);
 HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(i2c1_bus);
-uint32_t old_time_remaining_sec = 0;
 
 // Birth Day
 int birth_yr = 2000;
@@ -186,6 +185,7 @@ uint32_t get_sec_since_epoch(uint32_t yr, uint32_t mo, uint32_t day,
  */
 void rtc_counter() {
   static int last_print_time;
+  static uint32_t old_time_remaining_sec = 0;
 
   // Calculate expected death date
   int death_yr = birth_yr + useful_lifetime_age;
