@@ -14,6 +14,18 @@ int birth_day = 27;
 // Age you will die
 int useful_lifetime_age = 70;
 
+/**
+ * @brief  This function is executed in case of error occurrence.
+ * @param  None
+ * @retval None
+ */
+void _Error_Handler(const char *msg, int val) {
+  /* User can add his own implementation to report the HAL error return state */
+  serialUSB.printf("Error: %s (%i)\n\r", msg, val);
+  while (1) {
+  }
+}
+
 void loading() {
   display.illuminateChar(0b0000000000000001, 0);
   display.updateDisplay();
@@ -107,11 +119,12 @@ void counter() {
  * Given year, mo, day, hr, min, sec, return the time in sec since the Unix
  * epoch acounting for leap years.
  */
-int get_sec_since_epoch(int yr, int mo, int day, int hr, int min, int sec) {
-  int time_since_epoch_sec = 0;
+uint32_t get_sec_since_epoch(uint32_t yr, uint32_t mo, uint32_t day,
+                             uint32_t hr, uint32_t min, uint32_t sec) {
+  uint32_t time_since_epoch_sec = 0;
   // Add a day if a leap year (i.e. if the year is divisible by 4).
   // Does't include current year.
-  for (int i = 1970; i < yr; i++) {
+  for (uint32_t i = 1970; i < yr; i++) {
     if (i % 4 == 0) {
       time_since_epoch_sec += 366 * 24 * 60 * 60;
     } else {
@@ -120,7 +133,7 @@ int get_sec_since_epoch(int yr, int mo, int day, int hr, int min, int sec) {
   }
 
   // Don't include the current month
-  for (int i = 1; i < mo; i++) {
+  for (uint32_t i = 1; i < mo; i++) {
     if (mo == 1) {
       time_since_epoch_sec += 31 * 24 * 60 * 60;
     } else if (mo == 2) {
@@ -157,6 +170,11 @@ int get_sec_since_epoch(int yr, int mo, int day, int hr, int min, int sec) {
   time_since_epoch_sec += hr * 60 * 60;
   time_since_epoch_sec += min * 60;
   time_since_epoch_sec += sec;
+
+  if (time_since_epoch_sec < 0) {
+    serialUSB.printf("time_since_epoch_sec overflowed\r\n");
+    Error_Handler();
+  }
 
   return time_since_epoch_sec;
 }
@@ -226,49 +244,133 @@ void rtc_counter() {
   // yrs_left = time_left
 
   // Calc time remaining in life in seconds
-  int death_time_since_epoch_sec = get_sec_since_epoch(
+  // To this by:
+  // Get current datetime, convert that to seconds since epoch.
+  // Get death time since epoch in sec.
+  // Do death_time_since_epoch - current_time_since_epoch.
+  // Put into our desired display format of yrs, weks, days, hrs, mins, secs, ms
+  // yy,ww,d,hh,mm,ss,ms
+  uint32_t death_time_since_epoch_sec = get_sec_since_epoch(
       death_yr, death_mo, death_day, death_hr, death_min, death_sec);
-  int curr_time_since_epoch_sec = get_sec_since_epoch(
+  uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
       curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
-  int time_remaining_sec =
+  uint32_t time_remaining_sec =
       death_time_since_epoch_sec - curr_time_since_epoch_sec;
 
   // Put time into new format
-  int time_remaining_sec_temp = time_remaining_sec;
-  int yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
+  uint32_t time_remaining_sec_temp = time_remaining_sec;
+  uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
   time_remaining_sec_temp -= yrs_left * 365 * 24 * 60 * 60;
-  int wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
+  uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
   time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
   // ASSERT(wks_left<52)
-  int days_left = time_remaining_sec_temp / (24 * 60 * 60);
+  uint32_t days_left = time_remaining_sec_temp / (24 * 60 * 60);
   time_remaining_sec_temp -= days_left * 24 * 60 * 60;
   // ASSERT(days_left<7)
-  int hrs_left = time_remaining_sec_temp / (60 * 60);
+  if (!(days_left < 7)) {
+    Error_Handler();
+  }
+  uint32_t hrs_left = time_remaining_sec_temp / (60 * 60);
   time_remaining_sec_temp -= hrs_left * 60 * 60;
   // ASSERT(hrs_left<24)
-  int mins_left = time_remaining_sec_temp / 60;
+  uint32_t mins_left = time_remaining_sec_temp / 60;
   time_remaining_sec_temp -= mins_left * 60;
   // ASSERT(mins_left<60)
-  int sec_left = time_remaining_sec_temp;
+  uint32_t sec_left = time_remaining_sec_temp;
   // ASSERT(sec_left<60)
 
+  // Format output string
+  // Format: yy,ww,d,hh,mm,ss,ms
+  /*
+    Useful to get a single digit from a number:
+    Let N be the input number.
+    If N is a one-digit number, return it.
+    Set N = N / 10. This step removes the last digit of N.
+    N % 10 gives us the last digit of N. Since we have already removed the last
+    digit of N in the previous step, N % 10 is equal to the second last digit
+    of the input number. Return N % 10.
+  */
+  /*
+    To get ASCII number of a digit just add the digit to '0' char.
+  */
+  char output_str[16]; // Output display is 16 characters long.
+
+  // Format years
+  if (yrs_left < 10) {
+    output_str[0] = '0' + 0;
+    output_str[1] = '0' + yrs_left;
+  } else {
+    output_str[0] = '0' + yrs_left / 10;
+    output_str[1] = '0' + yrs_left % 10;
+  }
+
+  // Format weeks
+  if (wks_left < 10) {
+    output_str[2] = '0' + 0;
+    output_str[3] = '0' + wks_left;
+  } else {
+    output_str[2] = '0' + wks_left / 10;
+    output_str[3] = '0' + wks_left % 10;
+  }
+
+  // Format days
+  // Days should always be <7days. We already asserted this above.
+  output_str[4] = '0' + 0;
+  output_str[5] = '0' + days_left;
+
+  // Format hours
+  if (hrs_left < 10) {
+    output_str[6] = '0' + 0;
+    output_str[7] = '0' + hrs_left;
+  } else {
+    output_str[6] = '0' + hrs_left / 10;
+    output_str[7] = '0' + hrs_left % 10;
+  }
+  // Format minutes
+  if (mins_left < 10) {
+    output_str[8] = '0' + 0;
+    output_str[9] = '0' + mins_left;
+  } else {
+    output_str[8] = '0' + mins_left / 10;
+    output_str[9] = '0' + mins_left % 10;
+  }
+  // Format seconds
+  if (sec_left < 10) {
+    output_str[10] = '0' + 0;
+    output_str[11] = '0' + sec_left;
+  } else {
+    output_str[10] = '0' + sec_left / 10;
+    output_str[11] = '0' + sec_left % 10;
+  }
+
+  // Update display
+  display.printf(output_str);
+  // display.printf("%d%d%d%d%d%d", yrs_left, wks_left, days_left, hrs_left,
+  //                mins_left, sec_left);
+
+  // Print for debugging purposes
   if (millis() - last_print_time > 1000) {
     last_print_time = millis();
     // Display time remaining in your life
-    serialUSB.printf("death_time_since_epoch_sec: %d\r\n",
+    serialUSB.printf("death_time_since_epoch_sec: %u\r\n",
                      death_time_since_epoch_sec);
-    serialUSB.printf("curr_time_since_epoch_sec: %d\r\n",
+    serialUSB.printf("curr_time_since_epoch_sec: %u\r\n",
                      curr_time_since_epoch_sec);
-    serialUSB.printf("total_wks_left: %d\r\n",
+    // For comparing to timeanddate.com countdown timer to check that I did this
+    // correctly.
+    serialUSB.printf("total_wks_left: %u\r\n",
                      time_remaining_sec / (7 * 24 * 60 * 60));
-    serialUSB.printf("total_days_left: %d\r\n",
+    serialUSB.printf("total_days_left: %u\r\n",
                      time_remaining_sec / (24 * 60 * 60));
-    serialUSB.printf("total_min_left: %d\r\n", time_remaining_sec / 60);
-    serialUSB.printf("total_sec_left: %d\r\n", time_remaining_sec);
+    serialUSB.printf("total_min_left: %u\r\n", time_remaining_sec / 60);
+    serialUSB.printf("total_sec_left: %u\r\n", time_remaining_sec);
+
     serialUSB.printf(
-        "millis(): %d yrs_left: %d wks_left: %d days_left: %d hrs_left: "
-        "%d min_left: %d sec_left: %d\r\n",
+        "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
+        "%u min_left: %u sec_left: %u\r\n",
         millis(), yrs_left, wks_left, days_left, hrs_left, mins_left, sec_left);
+
+    serialUSB.printf("Output String: %s\r\n", output_str);
   }
 }
 
@@ -294,11 +396,18 @@ void print_rtc_date_and_time() {
                    yr + 1970, mo, date, hr, min, sec, h12, pm_time);
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  serialUSB.begin(115200);
-  i2c1_bus.begin();
-  // put your main code here, to run repeatedly:
+void set_datetime(int year, int month, int date, int hr, int min, int sec) {
+  rtc.setYear(year - 1970);
+  rtc.setMonth(month);
+  rtc.setDate(date);
+  rtc.setHour(hr);
+  rtc.setMinute(min);
+  rtc.setSecond(sec);
+  rtc.setClockMode(true);
+}
+
+void init_display() {
+  // display.initialize();
   serialUSB.printf("George is Cool\r\n");
   while (display.begin(0x70, 0x71, 0x72, 0x73, i2c1_bus) == false) {
     serialUSB.printf("Display did not acknowledge!\r\n");
@@ -309,18 +418,37 @@ void setup() {
   display.printf("JOHN IS SO HOT");
   // display.setBlinkRate(1);
   display.setBrightness(1);
-  // display.colonOn();
+  display.colonOn();
   // display.decimalOn();
   // current_draw_test();
   display.clear();
+}
 
-  // rtc.setYear(2022 - 1970);
-  // rtc.setMonth(5);
-  // rtc.setDate(22);
-  // rtc.setHour(0);
-  // rtc.setMinute(15);
-  // rtc.setSecond(0);
-  rtc.setClockMode(true);
+void setup() {
+  // put your setup code here, to run once:
+  serialUSB.begin(115200);
+  i2c1_bus.begin();
+  
+  init_display();
+
+  serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
+
+  rtc.enable32kHz(false);
+  if (!rtc.oscillatorCheck()) {
+    serialUSB.printf("Oscillator is not enabled. Enabling...\r\n");
+    // Turn on using battery
+    rtc.enableOscillator(true, true, 3);
+  } else {
+    serialUSB.printf("Oscillator is enabled.\r\n");
+  }
+  delay(1000);
+  serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
+
+  set_datetime(2022, 6, 18, 15, 15, 0);
+  // Check RTC datetime
+  if (rtc.getYear() + 1970 < 2020) {
+    // Error_Handler();
+  }
 }
 
 void displayFakeColon(uint8_t digit) {
