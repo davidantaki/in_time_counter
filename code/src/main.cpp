@@ -204,47 +204,6 @@ void rtc_counter() {
   int curr_min = rtc.getMinute();
   int curr_sec = rtc.getSecond();
 
-  // // Calculate time remaining in your life.
-  // // Note: day_left and months_left will always =0 because we assume you will
-  // // die on your birthday.
-  // int sec_left = death_sec - curr_sec;
-  // if (sec_left < 0) {
-  //   // Borrow from the death_min
-  //   death_min -= 1;
-  //   sec_left += 60;
-  // }
-  // int min_left = death_min - curr_min;
-  // if (min_left < 0) {
-  //   // Borrow from the death_hr
-  //   death_hr -= 1;
-  //   min_left += 60;
-  // }
-  // int hr_left = death_hr - curr_hr;
-  // if (hr_left < 0) {
-  //   // Borrow from the death_yr because days and months left should always be
-  //   0.
-  //   // Also this way we don't have to track leap years.
-  //   death_yr -= 1;
-  //   hr_left += 365 * 24;
-  // }
-  // int day_left = curr_day;
-  // int yr_left = death_yr - curr_yr;
-
-  // if (millis() - last_print_time > 1000) {
-  //   last_print_time = millis();
-  //   // Display time remaining in your life
-  //   serialUSB.printf("millis(): %d yr_left: %d mo_left: "
-  //                    "%d day_left: %d hr_left: "
-  //                    "%d min_left: %d sec_left: %d\r\n",
-  //                    millis(), yr_left, mo_left, days_left, hr_left,
-  //                    min_left, sec_left);
-  // }
-  // // Calc time left in hours
-  // int time_left_in_hrs = yr_left * 365 * 24 + hr_left;
-
-  // // Calc time left in new format
-  // yrs_left = time_left
-
   // Calc time remaining in life in seconds
   // To this by:
   // Get current datetime, convert that to seconds since epoch.
