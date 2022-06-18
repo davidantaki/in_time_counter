@@ -23,6 +23,7 @@ int useful_lifetime_age = 70;
 void _Error_Handler(const char *msg, int val) {
   /* User can add his own implementation to report the HAL error return state */
   serialUSB.printf("Error: %s (%i)\n\r", msg, val);
+  display.printf("Error:%s:%i", msg, val);
   while (1) {
   }
 }
