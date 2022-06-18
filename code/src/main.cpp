@@ -347,8 +347,6 @@ void rtc_counter() {
   //   display.printf(output_str);
   //   old_time_remaining_sec = time_remaining_sec;
   // }
-
-  // Update millisecond segments seperately
   display.printf(output_str);
   display.colonOn();
 
