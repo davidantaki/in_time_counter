@@ -188,6 +188,13 @@ void rtc_counter() {
   static int time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
 
+  // Check RTC datetime.
+  // If the year is off, then we might have lost I2C connect to RTC.
+  // Try to recover.
+  if (rtc.getYear() + 1970 < 2021) {
+    NVIC_SystemReset();
+  }
+
   // Calculate expected death date
   int death_yr = birth_yr + useful_lifetime_age;
   int death_mo = birth_mo;
@@ -460,10 +467,6 @@ void setup() {
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
   set_datetime(2022, 6, 18, 15, 15, 0);
-  // Check RTC datetime
-  if (rtc.getYear() + 1970 < 2020) {
-    // Error_Handler();
-  }
 }
 
 void displayFakeColon(uint8_t digit) {
