@@ -225,6 +225,9 @@ void rtc_counter() {
   uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
   time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
   // ASSERT(wks_left<52)
+  if (!(wks_left < 52)) {
+    Error_Handler();
+  }
   uint32_t days_left = time_remaining_sec_temp / (24 * 60 * 60);
   time_remaining_sec_temp -= days_left * 24 * 60 * 60;
   // ASSERT(days_left<7)
@@ -234,11 +237,20 @@ void rtc_counter() {
   uint32_t hrs_left = time_remaining_sec_temp / (60 * 60);
   time_remaining_sec_temp -= hrs_left * 60 * 60;
   // ASSERT(hrs_left<24)
+  if (!(hrs_left < 24)) {
+    Error_Handler();
+  }
   uint32_t mins_left = time_remaining_sec_temp / 60;
   time_remaining_sec_temp -= mins_left * 60;
   // ASSERT(mins_left<60)
+  if (!(mins_left < 60)) {
+    Error_Handler();
+  }
   uint32_t sec_left = time_remaining_sec_temp;
   // ASSERT(sec_left<60)
+  if (!(sec_left < 60)) {
+    Error_Handler();
+  }
 
   // Format output string
   // Format: yy,ww,d,hh,mm,ss,ms
