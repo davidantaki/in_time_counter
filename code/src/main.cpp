@@ -266,6 +266,14 @@ void rtc_counter() {
     old_time_remaining_sec = time_remaining_sec;
     ms_left = 1000;
     time_remaining_sec_change_time_ms = millis();
+    // VALIDITY CHECK: Check that the time_remaining_sec variable has changed
+    // within the last 2 seconds, if it hasn't then something got stuck,
+    // probably due to not reading the RTC correctly.
+    if (millis() - time_remaining_sec_change_time_ms > 2000) {
+      serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
+                       "over 2sec. Reseting...");
+      NVIC_SystemReset();
+    }
     // Blink colons when the seconds digit changes
     display.colonOnSingle(2);
     display.colonOnSingle(3);
