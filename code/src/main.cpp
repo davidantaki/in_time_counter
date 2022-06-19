@@ -414,7 +414,7 @@ void set_datetime(int year, int month, int date, int hr, int min, int sec) {
   rtc.setClockMode(true);
 }
 
-void init_display() {
+bool init_display() {
 
   serialUSB.printf("Running init_display()...\r\n");
   while (display.begin(0x70, 0x71, 0x72, 0x73, i2c1_bus) == false) {
@@ -423,20 +423,20 @@ void init_display() {
   }
   serialUSB.printf("Display acknowledged.\r\n");
 
-  if (!display.initialize()) {
-    Error_Handler();
+  if (!display.setBrightness(1)) {
+    return false;
   }
   if (!display.clear()) {
-    Error_Handler();
+    return false;
   }
-  if (!display.setBrightness(1)) {
-    Error_Handler();
-  }
+
   if (!display.colonOn()) {
-    Error_Handler();
+    return false;
   }
+  display.displayOn();
   // current_draw_test();
   display.printf("JOHN IS SO HOT");
+  return true;
 }
 
 void setup() {
