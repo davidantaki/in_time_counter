@@ -180,6 +180,77 @@ uint32_t get_sec_since_epoch(uint32_t yr, uint32_t mo, uint32_t day,
   return time_since_epoch_sec;
 }
 
+uint32_t get_num_days_in_mo(uint32_t mo, uint32_t yr) {
+  if (mo == 1) {
+    return 31;
+  } else if (mo == 2) {
+    // Check if current year is a leap year
+    if (yr % 4 == 0) {
+      return 29;
+    } else {
+      return 28;
+    }
+  } else if (mo == 3) {
+    return 31;
+  } else if (mo == 4) {
+    return 30;
+  } else if (mo == 5) {
+    return 31;
+  } else if (mo == 6) {
+    return 30;
+  } else if (mo == 7) {
+    return 31;
+  } else if (mo == 8) {
+    return 31;
+  } else if (mo == 9) {
+    return 30;
+  } else if (mo == 10) {
+    return 31;
+  } else if (mo == 11) {
+    return 30;
+  } else if (mo == 12) {
+    return 31;
+  }
+}
+
+uint32_t mo_left_in_year_to_sec(uint32_t mo_left, uint32_t yr) {
+  uint32_t days_left = 0;
+  for (int i = mo_left; i > 0; i--) {
+    if (mo_left == 1) {
+      days_left += 31;
+    } else if (mo_left == 2) {
+      // Check if current year is a leap year
+      if (yr % 4 == 0) {
+        days_left += 29;
+      } else {
+        days_left += 28;
+      }
+    } else if (mo_left == 3) {
+      days_left += 31;
+    } else if (mo_left == 4) {
+      days_left += 30;
+    } else if (mo_left == 5) {
+      days_left += 31;
+    } else if (mo_left == 6) {
+      days_left += 30;
+    } else if (mo_left == 7) {
+      days_left += 31;
+    } else if (mo_left == 8) {
+      days_left += 31;
+    } else if (mo_left == 9) {
+      days_left += 30;
+    } else if (mo_left == 10) {
+      days_left += 31;
+    } else if (mo_left == 11) {
+      days_left += 30;
+    } else if (mo_left == 12) {
+      days_left += 31;
+    }
+  }
+
+  return days_left * 24 * 60 * 60;
+}
+
 /**
  * @brief Counter using a real time clock.
  */
@@ -218,8 +289,8 @@ void rtc_counter() {
   // Get current datetime, convert that to seconds since epoch.
   // Get death time since epoch in sec.
   // Do death_time_since_epoch - current_time_since_epoch.
-  // Put into our desired display format of yrs, weks, days, hrs, mins, secs, ms
-  // yy,ww,d,hh,mm,ss,ms
+  // Put into our desired display format of yrs, weks, days, hrs, mins, secs,
+  // ms yy,ww,d,hh,mm,ss,ms
   uint32_t death_time_since_epoch_sec = get_sec_since_epoch(
       death_yr, death_mo, death_day, death_hr, death_min, death_sec);
   uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
@@ -229,18 +300,23 @@ void rtc_counter() {
 
   // Put time into new format
   uint32_t time_remaining_sec_temp = time_remaining_sec;
+  // Divide by number of seconds in a year, etc.
   uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
   time_remaining_sec_temp -= yrs_left * 365 * 24 * 60 * 60;
-  uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
-  time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
-  // ASSERT(wks_left<52)
-  if (!(wks_left < 52)) {
-    Error_Handler();
-  }
+
+  uint32_t mo_left = time_remaining_sec_temp / (30 * 24 * 60 * 60);
+  time_remaining_sec_temp -= mo_left_in_year_to_sec(mo_left, curr_yr);
+
+  // uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
+  // time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
+  // // ASSERT(wks_left<52)
+  // if (!(wks_left < 52)) {
+  //   Error_Handler();
+  // }
   uint32_t days_left = time_remaining_sec_temp / (24 * 60 * 60);
   time_remaining_sec_temp -= days_left * 24 * 60 * 60;
   // ASSERT(days_left<7)
-  if (!(days_left < 7)) {
+  if (!(days_left < 31)) {
     Error_Handler();
   }
   uint32_t hrs_left = time_remaining_sec_temp / (60 * 60);
@@ -291,9 +367,9 @@ void rtc_counter() {
     Let N be the input number.
     If N is a one-digit number, return it.
     Set N = N / 10. This step removes the last digit of N.
-    N % 10 gives us the last digit of N. Since we have already removed the last
-    digit of N in the previous step, N % 10 is equal to the second last digit
-    of the input number. Return N % 10.
+    N % 10 gives us the last digit of N. Since we have already removed the
+    last digit of N in the previous step, N % 10 is equal to the second last
+    digit of the input number. Return N % 10.
   */
   /*
     To get ASCII number of a digit just add the digit to '0' char.
@@ -311,19 +387,32 @@ void rtc_counter() {
     output_str[3] = '0' + yrs_left % 10;
   }
 
-  // Format weeks
-  if (wks_left < 10) {
+  // Format months
+  if (mo_left < 10) {
     output_str[4] = '0' + 0;
-    output_str[5] = '0' + wks_left;
+    output_str[5] = '0' + mo_left;
   } else {
-    output_str[4] = '0' + wks_left / 10;
-    output_str[5] = '0' + wks_left % 10;
+    output_str[4] = '0' + mo_left / 10;
+    output_str[5] = '0' + mo_left % 10;
   }
 
+  // Format weeks
+  // if (wks_left < 10) {
+  //   output_str[4] = '0' + 0;
+  //   output_str[5] = '0' + wks_left;
+  // } else {
+  //   output_str[4] = '0' + wks_left / 10;
+  //   output_str[5] = '0' + wks_left % 10;
+  // }
+
   // Format days
-  // Days should always be <7days. We already asserted this above.
-  output_str[6] = '0' + 0;
-  output_str[7] = '0' + days_left;
+  if (days_left < 10) {
+    output_str[6] = '0' + 0;
+    output_str[7] = '0' + days_left;
+  } else {
+    output_str[6] = '0' + days_left / 10;
+    output_str[7] = '0' + days_left % 10;
+  }
 
   // Format hours
   if (hrs_left < 10) {
@@ -374,8 +463,8 @@ void rtc_counter() {
                      death_time_since_epoch_sec);
     serialUSB.printf("curr_time_since_epoch_sec: %u\r\n",
                      curr_time_since_epoch_sec);
-    // For comparing to timeanddate.com countdown timer to check that I did this
-    // correctly.
+    // For comparing to timeanddate.com countdown timer to check that I did
+    // this correctly.
     serialUSB.printf("total_wks_left: %u\r\n",
                      time_remaining_sec / (7 * 24 * 60 * 60));
     serialUSB.printf("total_days_left: %u\r\n",
@@ -384,10 +473,16 @@ void rtc_counter() {
     serialUSB.printf("total_sec_left: %u\r\n", time_remaining_sec);
 
     serialUSB.printf(
-        "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
+        "millis(): %u yrs_left: %u mo_left: %u days_left: %u hrs_left: "
         "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
-        millis(), yrs_left, wks_left, days_left, hrs_left, mins_left, sec_left,
+        millis(), yrs_left, mo_left, days_left, hrs_left, mins_left, sec_left,
         ms_left_div_10);
+
+    // serialUSB.printf(
+    //     "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
+    //     "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
+    //     millis(), yrs_left, wks_left, days_left, hrs_left, mins_left,
+    //     sec_left, ms_left_div_10);
 
     serialUSB.printf("Output String: %s\r\n", output_str);
   }
