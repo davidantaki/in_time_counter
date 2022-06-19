@@ -187,6 +187,7 @@ void rtc_counter() {
   static int last_serialUSB_print_time;
   static int time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
+  static uint32_t last_display_update_time_ms;
 
   // Check RTC datetime.
   // If the year is off, then we might have lost I2C connect to RTC.
@@ -265,6 +266,10 @@ void rtc_counter() {
     old_time_remaining_sec = time_remaining_sec;
     ms_left = 1000;
     time_remaining_sec_change_time_ms = millis();
+    // Blink colons when the seconds digit changes
+    display.colonOnSingle(2);
+    display.colonOnSingle(3);
+    display.colonOnSingle(4);
   } else {
     ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
     // Clamp ms_left to (0,1000)
@@ -346,17 +351,15 @@ void rtc_counter() {
     output_str[15] = '0' + ms_left_div_10 % 10;
   }
 
-  // Update display only if the remaining time changed so that we aren't
-  // constantly updating the display. i.e. only update diplay when we need to.
-  // if (time_remaining_sec != old_time_remaining_sec) {
-  //   display.printf(output_str);
-  //   old_time_remaining_sec = time_remaining_sec;
-  // }
-  display.printf(output_str);
-  display.colonOn();
+  // Update display
+  if (millis() - last_display_update_time_ms > 10) {
+    last_display_update_time_ms = millis();
+    display.printf(output_str);
+  }
 
   // Print for debugging purposes
   if (millis() - last_serialUSB_print_time > 1000) {
+
     last_serialUSB_print_time = millis();
     // Display time remaining in your life
     serialUSB.printf("death_time_since_epoch_sec: %u\r\n",
@@ -429,10 +432,6 @@ bool init_display() {
   if (!display.clear()) {
     return false;
   }
-
-  if (!display.colonOn()) {
-    return false;
-  }
   display.displayOn();
   // current_draw_test();
   display.printf("JOHN IS SO HOT");
@@ -444,7 +443,7 @@ void setup() {
   serialUSB.begin(115200);
   i2c1_bus.begin();
 
-  if(!init_display()){
+  if (!init_display()) {
     serialUSB.printf("FAILED to init display. Reseting...\r\n");
     delay(1000);
     NVIC_SystemReset();
