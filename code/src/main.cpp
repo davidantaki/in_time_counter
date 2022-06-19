@@ -251,8 +251,33 @@ uint32_t mo_left_in_year_to_sec(uint32_t mo_left, uint32_t yr) {
   return days_left * 24 * 60 * 60;
 }
 
+uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
+                                      uint32_t start_day, uint32_t end_yr,
+                                      uint32_t end_mo, uint32_t end_day) {
+  uint32_t temp_start_yr = start_yr;
+  uint32_t temp_end_yr = end_yr;
+  // If start month is after February (the month that a leap day gets added to),
+  // then don't count the start year as a leap year.
+  if (start_mo > 2) {
+    temp_start_yr++;
+  }
+  // Also, if end month is before February, don't count that year.
+  if (end_mo < 2) {
+    temp_end_yr--;
+  }
+  uint32_t num_leap_yrs = 0;
+  for (int i = temp_start_yr; i <= temp_end_yr; i++) {
+    if (i % 4 == 0) {
+      num_leap_yrs++;
+    }
+  }
+
+  return num_leap_yrs;
+}
+
 /**
  * @brief Counter using a real time clock.
+ * Compare to https://www.tickcounter.com/
  */
 void rtc_counter() {
   static int last_serialUSB_print_time;
@@ -302,7 +327,10 @@ void rtc_counter() {
   uint32_t time_remaining_sec_temp = time_remaining_sec;
   // Divide by number of seconds in a year, etc.
   uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
-  time_remaining_sec_temp -= yrs_left * 365 * 24 * 60 * 60;
+  uint32_t leap_yrs_left = get_num_leap_years_btw_dates(
+      curr_yr, curr_mo, curr_day, death_yr, death_mo, death_day);
+  time_remaining_sec_temp -= ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
+                             (leap_yrs_left * 366 * 24 * 60 * 60);
 
   uint32_t mo_left = time_remaining_sec_temp / (30 * 24 * 60 * 60);
   time_remaining_sec_temp -= mo_left_in_year_to_sec(mo_left, curr_yr);
