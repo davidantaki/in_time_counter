@@ -295,7 +295,7 @@ void rtc_counter() {
       death_yr, death_mo, death_day, death_hr, death_min, death_sec);
   uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
       curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
-  uint32_t time_remaining_sec =
+  const uint32_t time_remaining_sec =
       death_time_since_epoch_sec - curr_time_since_epoch_sec;
 
   // Put time into new format
