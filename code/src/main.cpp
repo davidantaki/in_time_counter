@@ -285,9 +285,9 @@ void rtc_counter() {
   /*
     To get ASCII number of a digit just add the digit to '0' char.
   */
-  char output_str[16]; // Output display is 16 characters long.
-  output_str[0] = '0';
-  output_str[1] = '0';
+  char output_str[16];  // Output display is 16 characters long.
+  output_str[0] = 0xFF; // Display all segments
+  output_str[1] = 0xFF; // Display all segments
 
   // Format years
   if (yrs_left < 10) {
