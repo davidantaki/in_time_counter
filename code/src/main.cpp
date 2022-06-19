@@ -418,8 +418,8 @@ bool init_display() {
 
   serialUSB.printf("Running init_display()...\r\n");
   while (display.begin(0x70, 0x71, 0x72, 0x73, i2c1_bus) == false) {
-    serialUSB.printf("Display did not acknowledge!\r\n");
-    delay(1000);
+    serialUSB.printf("Display did not acknowledge! Reseting...\r\n");
+    return false;
   }
   serialUSB.printf("Display acknowledged.\r\n");
 
@@ -444,7 +444,11 @@ void setup() {
   serialUSB.begin(115200);
   i2c1_bus.begin();
 
-  init_display();
+  if(!init_display()){
+    serialUSB.printf("FAILED to init display. Reseting...\r\n");
+    delay(1000);
+    NVIC_SystemReset();
+  }
   // display.clear();
   // display.illuminateChar(1, 1);
   // // display.printChar(1, 1);
