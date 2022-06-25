@@ -7,6 +7,16 @@ HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(i2c1_bus);
 
+// Last RTC read
+bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
+uint32_t last_rtc_yr;
+uint32_t last_rtc_mo;
+uint32_t last_rtc_day;
+uint32_t last_rtc_hr;
+uint32_t last_rtc_min;
+uint32_t last_rtc_sec;
+uint32_t last_rtc_read_ms;
+
 // Birth Day
 int birth_yr = 2000;
 int birth_mo = 3;
@@ -25,6 +35,17 @@ void _Error_Handler(const char *msg, int val) {
   display.printf("Error:%s:%i", msg, val);
   while (1) {
   }
+}
+
+void get_RTC_datetime() {
+  // Get current date time
+  last_rtc_yr = 1970 + rtc.getYear();
+  last_rtc_mo = rtc.getMonth(last_rtc_century);
+  last_rtc_day = rtc.getDate();
+  last_rtc_hr = rtc.getHour(last_rtc_h12, last_rtc_pm_time);
+  last_rtc_min = rtc.getMinute();
+  last_rtc_sec = rtc.getSecond();
+  last_rtc_read_ms = millis();
 }
 
 void loading() {
@@ -72,7 +93,7 @@ Don't think the 4th turned on because not enough power.
 */
 void current_draw_test() { display.write("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"); }
 
-void counter() {
+void non_rtc_counter() {
   int last_sec_left_ms_update_ms = 0;
   int last_time_left_to_live_update_time_ms = 0;
   int yrs_left = 70;
@@ -114,6 +135,71 @@ void counter() {
   // serialUSB.printf(display_str.c_str());
   display.printf("%d%d%d%d%d%d%d", yrs_left, wks_left, days_left, hrs_left,
                  min_left, sec_left_ms);
+}
+
+void add_sec_to_date(uint32_t yr, uint32_t mo, uint32_t day, uint32_t hr,
+                     uint32_t min, uint32_t sec, uint32_t add_sec,
+                     uint32_t *ret_yr, uint32_t *ret_mo, uint32_t *ret_day,
+                     uint32_t *ret_hr, uint32_t *ret_min, uint32_t *ret_sec) {
+  uint32_t sec_temp = sec + add_sec;
+  uint32_t min_temp = min;
+  uint32_t hr_temp = hr;
+  uint32_t day_temp = day;
+  uint32_t mo_temp = mo;
+  uint32_t yr_temp = yr;
+  while (sec_temp >= 60) {
+    sec_temp -= 60;
+    min_temp += 1;
+    if (min_temp == 60) {
+      min_temp = 0;
+      hr_temp += 1;
+      if (hr_temp == 24) {
+        hr_temp = 0;
+        day_temp += 1;
+        // 31 days
+        if (mo == 1 || mo == 3 || mo == 5 || mo == 7 || mo == 8 || mo == 10 ||
+            mo == 12) {
+          if (day_temp == 32) {
+            day_temp = 0;
+            mo_temp += 1;
+          }
+          // 30 Days
+        } else if (mo == 4 || mo == 6 || mo == 9 || mo == 11) {
+          if (day_temp == 31) {
+            day_temp = 0;
+            mo_temp += 1;
+          }
+          // 28/29 days
+        } else if (mo == 2) {
+          // Check leap year
+          if (yr % 4 == 0) {
+            if (day_temp == 30) {
+              day_temp = 0;
+              mo_temp += 1;
+            }
+          } else {
+            if (day_temp == 29) {
+              day_temp = 0;
+              mo_temp += 1;
+            }
+          }
+        }
+
+        // Check month overflow
+        if (mo_temp == 13) {
+          mo_temp = 1;
+          yr_temp += 1;
+        }
+      }
+    }
+  }
+
+  *ret_yr = yr_temp;
+  *ret_mo = mo_temp;
+  *ret_day = day_temp;
+  *ret_hr = hr_temp;
+  *ret_min = min_temp;
+  *ret_sec = sec_temp;
 }
 
 /**
@@ -288,9 +374,9 @@ void rtc_counter() {
   // Check RTC datetime.
   // If the year is off, then we might have lost I2C connect to RTC.
   // Try to recover.
-  if (rtc.getYear() + 1970 < 2021) {
-    NVIC_SystemReset();
-  }
+  // if (rtc.getYear() + 1970 < 2021) {
+  //   NVIC_SystemReset();
+  // }
 
   // Calculate expected death date
   int death_yr = birth_yr + useful_lifetime_age;
@@ -302,24 +388,41 @@ void rtc_counter() {
 
   // Get current date time
   bool century, h12, pm_time;
-  int curr_yr = 1970 + rtc.getYear();
-  int curr_mo = rtc.getMonth(century);
-  int curr_day = rtc.getDate();
-  int curr_hr = rtc.getHour(h12, pm_time);
-  int curr_min = rtc.getMinute();
-  int curr_sec = rtc.getSecond();
+  // uint32_t curr_yr = 1970 + rtc.getYear();
+  // uint32_t curr_mo = rtc.getMonth(century);
+  // uint32_t curr_day = rtc.getDate();
+  // uint32_t curr_hr = rtc.getHour(h12, pm_time);
+  // uint32_t curr_min = rtc.getMinute();
+  // uint32_t curr_sec = rtc.getSecond();
+  uint32_t curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec;
+  add_sec_to_date(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
+                  last_rtc_min, last_rtc_sec,
+                  (millis() - last_rtc_read_ms) / 1000, &curr_yr, &curr_mo,
+                  &curr_day, &curr_hr, &curr_min, &curr_sec);
 
-  // Calc time remaining in life in seconds
-  // To this by:
-  // Get current datetime, convert that to seconds since epoch.
-  // Get death time since epoch in sec.
-  // Do death_time_since_epoch - current_time_since_epoch.
-  // Put into our desired display format of yrs, weks, days, hrs, mins, secs,
-  // ms yy,ww,d,hh,mm,ss,ms
+  /*
+  Calc time remaining in life in seconds
+  To this by:
+  Convert the last read of the RTC to seconds.
+  Add the number of seconds since the last RTC read.
+  -----
+  Get death time since epoch in sec.
+  -----
+  Do death_time_since_epoch - current_time_since_epoch.
+  Put into our desired display format of yrs, weks, days, hrs, mins, secs,
+  ms yy,ww,d,hh,mm,ss,ms
+  */
+  uint32_t last_RTC_read_since_epoch_sec =
+      get_sec_since_epoch(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
+                          last_rtc_min, last_rtc_sec);
+  uint32_t curr_time_since_epoch_sec =
+      last_RTC_read_since_epoch_sec + ((millis() - last_rtc_read_ms) / 1000);
   uint32_t death_time_since_epoch_sec = get_sec_since_epoch(
       death_yr, death_mo, death_day, death_hr, death_min, death_sec);
-  uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
-      curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
+  // uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
+  //     curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
+  // serialUSB.printf("curr_time_since_epoch_sec: %d\r\n",
+  //                  curr_time_since_epoch_sec);
   const uint32_t time_remaining_sec =
       death_time_since_epoch_sec - curr_time_since_epoch_sec;
 
@@ -570,7 +673,6 @@ bool init_display() {
 }
 
 void setup() {
-  // put your setup code here, to run once:
   serialUSB.begin(115200);
   i2c1_bus.begin();
 
@@ -595,10 +697,12 @@ void setup() {
   } else {
     serialUSB.printf("Oscillator is enabled.\r\n");
   }
-  delay(1000);
+  // delay(1000);
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
-  // set_datetime(2022, 6, 18, 19, 15, 0);
+  // Read RTC
+  get_RTC_datetime();
+  set_datetime(2022, 6, 25, 14, 9, 0);
 }
 
 void displayFakeColon(uint8_t digit) {
@@ -611,10 +715,19 @@ void loop() {
   counter_mode();
   // loading();
 
+  if (millis() - last_rtc_read_ms > 1000 * 60) {
+    NVIC_SystemReset();
+  }
+
   static int last_print_time;
   if (millis() - last_print_time > 1000) {
     last_print_time = millis();
     serialUSB.printf("main loop\r\n");
     print_rtc_date_and_time();
+    serialUSB.printf(
+        "Last RTC Read %d/%d/%d %d:%d:%d 12hr: "
+        "0x%X pm_time: 0x%X\r\n-------------------------------------\r\n",
+        last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
+        last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
   }
 }
