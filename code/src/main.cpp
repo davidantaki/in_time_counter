@@ -378,13 +378,6 @@ void rtc_counter() {
   uint32_t mo_left = secondsToMonthsIncludingLeapYear(isLeapYear(curr_datetime.year()), time_remaining_sec_temp);
   // time_remaining_sec_temp / (30 * 24 * 60 * 60);
   time_remaining_sec_temp -= mo_left_in_year_to_sec2(mo_left, curr_datetime.year());
-
-  // uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
-  // time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
-  // // ASSERT(wks_left<52)
-  // if (!(wks_left < 52)) {
-  //   Error_Handler();
-  // }
   
   uint32_t days_left = time_remaining_sec_temp / (24 * 60 * 60);
   time_remaining_sec_temp -= days_left * 24 * 60 * 60;
@@ -453,15 +446,6 @@ void rtc_counter() {
     output_str[output_str_i++] = '0' + mo_left % 10;
   }
 
-  // Format weeks
-  // if (wks_left < 10) {
-  //   output_str[4] = '0' + 0;
-  //   output_str[5] = '0' + wks_left;
-  // } else {
-  //   output_str[4] = '0' + wks_left / 10;
-  //   output_str[5] = '0' + wks_left % 10;
-  // }
-
   // Format days
   if (days_left < 10) {
     output_str[output_str_i++] = '0' + 0;
@@ -495,15 +479,6 @@ void rtc_counter() {
     output_str[output_str_i++] = '0' + sec_left / 10;
     output_str[output_str_i++] = '0' + sec_left % 10;
   }
-  // Format milliseconds
-  // int ms_left_div_10 = ms_left / 10;
-  // if (ms_left_div_10 < 10) {
-  //   output_str[14] = '0' + 0;
-  //   output_str[15] = '0' + ms_left_div_10;
-  // } else {
-  //   output_str[14] = '0' + ms_left_div_10 / 10;
-  //   output_str[15] = '0' + ms_left_div_10 % 10;
-  // }
 
   // Update display
   if (millis() - last_display_update_time_ms > 10) {
