@@ -11,7 +11,7 @@ HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(rtc_i2c_bus);
 
-static const uint32_t LOOP_TIME_MS = 500;
+static const uint32_t DISPLAY_UPDATE_TIME = 500;
 
 // Last RTC read
 DateTime last_rtc_read;
@@ -337,8 +337,9 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
  * @brief Counter using a real time clock.
  * Compare to https://www.tickcounter.com/
  */
-void rtc_counter() {
-  delay(LOOP_TIME_MS); // loop time
+bool rtc_counter() {
+  bool success = true;
+
   static uint32_t last_serialUSB_print_time;
   static uint32_t last_display_update_time_ms;
 
@@ -364,9 +365,7 @@ void rtc_counter() {
       last_RTC_read_since_epoch_sec + ((millis() - last_rtc_read_since_program_start_ms) / 1000);
   const DateTime curr_datetime = DateTime(curr_time_since_epoch_sec);
   const uint32_t death_time_since_epoch_sec = death_date.unixtime();
-  serialUSB.printf("death_time_since_epoch_sec: %u\r\n", death_time_since_epoch_sec);
   const uint32_t time_remaining_sec = death_time_since_epoch_sec - curr_time_since_epoch_sec;
-  serialUSB.printf("time_remaining_sec: %u\r\n", time_remaining_sec);
 
   // Put time into new format
   uint32_t time_remaining_sec_temp = time_remaining_sec;
@@ -486,9 +485,12 @@ void rtc_counter() {
   }
 
   // Update display
-  if (millis() - last_display_update_time_ms > 10) {
+  int ret = 0;
+  if (millis() - last_display_update_time_ms > DISPLAY_UPDATE_TIME) {
     last_display_update_time_ms = millis();
-    display.printf(output_str);
+    ret = display.printf(output_str);  // Not sure why it returns 22 when output_str is 16 characters long.
+    serialUSB.printf("display.printf ret: %d\r\n", ret);
+    // success = success && (ret == 22);
   }
 
   // Print for debugging purposes
@@ -533,11 +535,12 @@ void rtc_counter() {
     serialUSB.printf("ERROR: RTC Year is off\r\n");
     NVIC_SystemReset();
   }
+
+  return success;
 }
 
-void counter_mode() {
-  // counter();
-  rtc_counter();
+bool counter_mode() {
+  return rtc_counter();
 }
 
 void print_rtc_date_and_time() {
@@ -613,17 +616,18 @@ bool init_console() {
 
 bool init_rtc() {
   bool success = true;
-
-  rtc.enable32kHz(false);
+  delay(1000);
+  
 
   bool oscCheck = rtc.oscillatorCheck();
   serialUSB.printf("oscillatorCheck(): %d\r\n", oscCheck);
-
   
+  rtc.enable32kHz(false);
   if (!oscCheck) {
     serialUSB.printf("Oscillator is not enabled. Enabling...\r\n");
     // Turn on using battery
     rtc.enableOscillator(true, true, 3);
+    delay(1000);
   } else {
     serialUSB.printf("Oscillator is enabled.\r\n");
   }
@@ -649,6 +653,7 @@ void setup() {
 
   if(!success) {
     serialUSB.printf("ERROR: Initialization failed. Resetting...\r\n");
+    delay(1000);
     NVIC_SystemReset();
   }
 }
@@ -659,7 +664,8 @@ void displayFakeColon(uint8_t digit) {
 }
 
 void loop() {
-  counter_mode();
+  bool success = true;
+  success = success && counter_mode();
   IWatchdog.reload();
   
   // Print stuff
@@ -674,4 +680,10 @@ void loop() {
   //       last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
   //       last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
   // }
+
+  if(!success) {
+    serialUSB.printf("ERROR: Something went wrong. Resetting...\r\n");
+    delay(1000);
+    NVIC_SystemReset();
+  }
 }
