@@ -494,6 +494,7 @@ bool rtc_counter() {
     print_byte_cnt = display.printf(output_str.c_str());  // Not sure why it returns 22 when output_str is 16 characters long.
     serialUSB.printf("display.printf print_byte_cnt: %d\r\n", print_byte_cnt);
     success = success && (print_byte_cnt == 16);
+    success = success && display.updateDisplay();
   }
 
   // Print for debugging purposes
