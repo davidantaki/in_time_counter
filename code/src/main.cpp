@@ -427,7 +427,8 @@ bool rtc_counter() {
   /*
     To get ASCII number of a digit just add the digit to '0' char.
   */
-  char output_str[16];  // Output display is 16 characters long.
+  // char output_str[16];  // Output display is 16 characters long.
+  std::string output_str = "0000000000000000";
   uint32_t output_str_i = 0;
   output_str[output_str_i++] = 0xFF; // Display all segments
   output_str[output_str_i++] = 0xFF; // Display all segments
@@ -487,17 +488,16 @@ bool rtc_counter() {
   }
 
   // Update display
-  int ret = 0;
+  int print_byte_cnt = 0;
   if (millis() - last_display_update_time_ms > DISPLAY_UPDATE_TIME) {
     last_display_update_time_ms = millis();
-    ret = display.printf(output_str);  // Not sure why it returns 22 when output_str is 16 characters long.
-    serialUSB.printf("display.printf ret: %d\r\n", ret);
-    // success = success && (ret == 22);
+    print_byte_cnt = display.printf(output_str.c_str());  // Not sure why it returns 22 when output_str is 16 characters long.
+    serialUSB.printf("display.printf print_byte_cnt: %d\r\n", print_byte_cnt);
+    success = success && (print_byte_cnt == 16);
   }
 
   // Print for debugging purposes
   if (millis() - last_serialUSB_print_time > 1000) {
-
     last_serialUSB_print_time = millis();
     // Display time remaining in your life
     serialUSB.printf("death_time_since_epoch_sec: %u\r\n",
@@ -527,7 +527,7 @@ bool rtc_counter() {
     // serialUSB.printf("Current DateTime (Internal Clock): %u:%u:%u %u:%u:%u\r\n",
     //                  curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
 
-    serialUSB.printf("Output String: %s\r\n", output_str);
+    serialUSB.printf("Output String: '%s'\r\n", output_str.c_str());
   }
 
   // Check RTC datetime.
@@ -651,7 +651,7 @@ void setup() {
   success = success && get_RTC_datetime();
 
   // Use the below to set the current date time if it has not be set yet.
-  // set_datetime(2022, 12, 25, 14, 39, 0);
+  // set_datetime(2022, 12, 25, 16, 56, 0);
 
   if(!success) {
     serialUSB.printf("ERROR: Initialization failed. Resetting...\r\n");
