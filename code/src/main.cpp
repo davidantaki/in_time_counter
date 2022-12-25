@@ -610,9 +610,8 @@ void rtc_counter() {
 
     serialUSB.printf(
         "millis(): %u yrs_left: %u mo_left: %u days_left: %u hrs_left: "
-        "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
-        millis(), yrs_left, mo_left, days_left, hrs_left, mins_left, sec_left,
-        ms_left_div_10);
+        "%u min_left: %u sec_left: %u\r\n",
+        millis(), yrs_left, mo_left, days_left, hrs_left, mins_left, sec_left);
 
     // serialUSB.printf(
     //     "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
