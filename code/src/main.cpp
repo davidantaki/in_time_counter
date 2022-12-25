@@ -2,7 +2,10 @@
 #include <DS3231.h>
 #include <SparkFun_Alphanumeric_Display.h>
 
-TwoWire i2c1_bus(PB7, PB6);
+#define Error_Handler() _Error_Handler(__FILE__, __LINE__)
+
+TwoWire i2c1_bus(PB7, PB6); // SDA, SCL
+TwoWire i2c2_bus(PB4, PA7); // SDA, SCL
 HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(i2c1_bus);
@@ -32,7 +35,7 @@ int useful_lifetime_age = 70;
 void _Error_Handler(const char *msg, int val) {
   /* User can add his own implementation to report the HAL error return state */
   serialUSB.printf("Error: %s (%i)\n\r", msg, val);
-  display.printf("Error:%s:%i", msg, val);
+  display.printf("ERROR");
   while (1) {
   }
 }
@@ -46,6 +49,11 @@ void get_RTC_datetime() {
   last_rtc_min = rtc.getMinute();
   last_rtc_sec = rtc.getSecond();
   last_rtc_read_ms = millis();
+  serialUSB.printf(
+      "RTC initial read: last_rtc_yr(): %d\tlast_rtc_mo: %d\tlast_rtc_day: "
+      "%d\tlast_rtc_min: %d\tlast_rtc_sec: %d\n\r",
+      last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
+      last_rtc_sec);
 }
 
 void loading() {
@@ -296,7 +304,40 @@ uint32_t get_num_days_in_mo(uint32_t mo, uint32_t yr) {
     return 30;
   } else if (mo == 12) {
     return 31;
+  }else{
+    Error_Handler();
   }
+}
+
+uint32_t secondsToMonthsIncludingLeapYear(bool leapYear, uint32_t seconds) {
+  uint32_t months = 0;
+  uint32_t days = seconds / 86400;
+  uint32_t years = days / 365;
+  months += years * 12;
+  days -= years * 365;
+  if (leapYear) {
+    if (days > 60) {
+      days -= 1;
+    }
+  }
+  months += days / 30;
+  return months;
+}
+
+bool isLeapYear(uint32_t year) {
+  if (year % 4 == 0) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+uint32_t mo_left_in_year_to_sec2(uint32_t mo_left, uint32_t yr) {
+  uint32_t sec = 0;
+  for (uint32_t i = 1; i <= mo_left; i++) {
+    sec += get_num_days_in_mo(i, yr) * 24 * 60 * 60;
+  }
+  return sec;
 }
 
 uint32_t mo_left_in_year_to_sec(uint32_t mo_left, uint32_t yr) {
@@ -366,17 +407,11 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
  * Compare to https://www.tickcounter.com/
  */
 void rtc_counter() {
+  delay(10); // 10ms loop time
   static int last_serialUSB_print_time;
   static int time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
   static uint32_t last_display_update_time_ms;
-
-  // Check RTC datetime.
-  // If the year is off, then we might have lost I2C connect to RTC.
-  // Try to recover.
-  // if (rtc.getYear() + 1970 < 2021) {
-  //   NVIC_SystemReset();
-  // }
 
   // Calculate expected death date
   int death_yr = birth_yr + useful_lifetime_age;
@@ -435,8 +470,9 @@ void rtc_counter() {
   time_remaining_sec_temp -= ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
                              (leap_yrs_left * 366 * 24 * 60 * 60);
 
-  uint32_t mo_left = time_remaining_sec_temp / (30 * 24 * 60 * 60);
-  time_remaining_sec_temp -= mo_left_in_year_to_sec(mo_left, curr_yr);
+  uint32_t mo_left = secondsToMonthsIncludingLeapYear(isLeapYear(curr_yr), time_remaining_sec_temp);
+  // time_remaining_sec_temp / (30 * 24 * 60 * 60);
+  time_remaining_sec_temp -= mo_left_in_year_to_sec2(mo_left, curr_yr);
 
   // uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
   // time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
@@ -444,27 +480,32 @@ void rtc_counter() {
   // if (!(wks_left < 52)) {
   //   Error_Handler();
   // }
+  
   uint32_t days_left = time_remaining_sec_temp / (24 * 60 * 60);
   time_remaining_sec_temp -= days_left * 24 * 60 * 60;
   // ASSERT(days_left<7)
   if (!(days_left < 31)) {
+    serialUSB.printf("Days Left: %d\n\r", days_left);
     Error_Handler();
   }
   uint32_t hrs_left = time_remaining_sec_temp / (60 * 60);
   time_remaining_sec_temp -= hrs_left * 60 * 60;
   // ASSERT(hrs_left<24)
   if (!(hrs_left < 24)) {
+    serialUSB.printf("hrs_left: %d\n\r", hrs_left);
     Error_Handler();
   }
   uint32_t mins_left = time_remaining_sec_temp / 60;
   time_remaining_sec_temp -= mins_left * 60;
   // ASSERT(mins_left<60)
   if (!(mins_left < 60)) {
+    serialUSB.printf("mins_left: %d\n\r", mins_left);
     Error_Handler();
   }
   uint32_t sec_left = time_remaining_sec_temp;
   // ASSERT(sec_left<60)
   if (!(sec_left < 60)) {
+    serialUSB.printf("sec_left: %d\n\r", sec_left);
     Error_Handler();
   }
   uint32_t ms_left;
@@ -476,11 +517,11 @@ void rtc_counter() {
     // VALIDITY CHECK: Check that the time_remaining_sec variable has changed
     // within the last 2 seconds, if it hasn't then something got stuck,
     // probably due to not reading the RTC correctly.
-    if (millis() - time_remaining_sec_change_time_ms > 2000) {
-      serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
-                       "over 2sec. Reseting...");
-      NVIC_SystemReset();
-    }
+    // if (millis() - time_remaining_sec_change_time_ms > 2000) {
+    //   serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
+    //                    "over 2sec. Reseting...");
+    //   NVIC_SystemReset();
+    // }
     // Blink colons when the seconds digit changes
     display.colonOnSingle(2);
     display.colonOnSingle(3);
@@ -615,11 +656,22 @@ void rtc_counter() {
     //     millis(), yrs_left, wks_left, days_left, hrs_left, mins_left,
     //     sec_left, ms_left_div_10);
 
+    serialUSB.printf("Current DateTime (Internal Clock): %u:%u:%u %u:%u:%u\r\n",
+                     curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
+
     serialUSB.printf("Output String: %s\r\n", output_str);
+  }
+
+  // Check RTC datetime.
+  // If the year is off, then we might have lost I2C connect to RTC.
+  // Try to recover.
+  if (rtc.getYear() + 1970 < 2021) {
+    serialUSB.printf("ERROR: RTC Year is off\r\n");
+    NVIC_SystemReset();
   }
 }
 
-void john_is_so_hot_mode() { display.print("JOHN IS SO HOT"); }
+void john_is_so_hot_mode() { display.print("BEMILY IS SO HOT"); }
 
 void counter_mode() {
   // counter();
@@ -654,7 +706,7 @@ void set_datetime(int year, int month, int date, int hr, int min, int sec) {
 bool init_display() {
 
   serialUSB.printf("Running init_display()...\r\n");
-  while (display.begin(0x70, 0x71, 0x72, 0x73, i2c1_bus) == false) {
+  while (display.begin(0x70, 0x71, 0x72, 0x73, i2c2_bus) == false) {
     serialUSB.printf("Display did not acknowledge! Reseting...\r\n");
     return false;
   }
@@ -672,21 +724,26 @@ bool init_display() {
   return true;
 }
 
+void initI2C() {
+  i2c1_bus.begin();
+  i2c1_bus.setClock(100000);
+  i2c1_bus.setTimeout(100);
+
+  i2c2_bus.begin();
+  i2c2_bus.setClock(100000);
+  i2c2_bus.setTimeout(100);
+}
+
 void setup() {
   serialUSB.begin(115200);
-  i2c1_bus.begin();
+  initI2C();
 
   if (!init_display()) {
     serialUSB.printf("FAILED to init display. Reseting...\r\n");
     delay(1000);
     NVIC_SystemReset();
   }
-  // display.clear();
-  // display.illuminateChar(1, 1);
-  // // display.printChar(1, 1);
-  // display.updateDisplay();
-  // while (1) {
-  // }
+
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
   rtc.enable32kHz(false);
@@ -697,12 +754,11 @@ void setup() {
   } else {
     serialUSB.printf("Oscillator is enabled.\r\n");
   }
-  // delay(1000);
   serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
 
   // Read RTC
   get_RTC_datetime();
-  set_datetime(2022, 6, 25, 14, 9, 0);
+  // set_datetime(2022, 11, 1, 18, 34, 0);
 }
 
 void displayFakeColon(uint8_t digit) {
@@ -711,14 +767,15 @@ void displayFakeColon(uint8_t digit) {
 }
 
 void loop() {
-  // john_is_so_hot_mode();
   counter_mode();
   // loading();
 
-  if (millis() - last_rtc_read_ms > 1000 * 60) {
+  // Periodically Reset
+  if (millis() - last_rtc_read_ms > 1000 * 60 * 1) {
     NVIC_SystemReset();
   }
 
+  // Print stuff
   static int last_print_time;
   if (millis() - last_print_time > 1000) {
     last_print_time = millis();
