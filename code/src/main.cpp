@@ -21,11 +21,11 @@ uint32_t last_rtc_sec;
 uint32_t last_rtc_read_ms;
 
 // Birth Day
-int birth_yr = 2000;
-int birth_mo = 3;
-int birth_day = 27;
+static const uint32_t birth_yr = 2000;
+static const uint32_t birth_mo = 3;
+static const uint32_t birth_day = 27;
 // Age you will die
-int useful_lifetime_age = 70;
+static const uint32_t useful_lifetime_age = 70;
 
 /**
  * @brief  This function is executed in case of error occurrence.
@@ -407,19 +407,19 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
  * Compare to https://www.tickcounter.com/
  */
 void rtc_counter() {
-  delay(10); // 10ms loop time
+  delay(500); // loop time
   static int last_serialUSB_print_time;
   static int time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
   static uint32_t last_display_update_time_ms;
 
   // Calculate expected death date
-  int death_yr = birth_yr + useful_lifetime_age;
-  int death_mo = birth_mo;
-  int death_day = birth_day;
-  int death_hr = 12;
-  int death_min = 0;
-  int death_sec = 0;
+  static uint32_t death_yr = birth_yr + useful_lifetime_age;
+  static uint32_t death_mo = birth_mo;
+  static uint32_t death_day = birth_day;
+  static uint32_t death_hr = 12;
+  static uint32_t death_min = 0;
+  static uint32_t death_sec = 0;
 
   // Get current date time
   bool century, h12, pm_time;
@@ -508,29 +508,29 @@ void rtc_counter() {
     serialUSB.printf("sec_left: %d\n\r", sec_left);
     Error_Handler();
   }
-  uint32_t ms_left;
-  // Basically, reset ms_left when sec_left has changed.
-  if (time_remaining_sec != old_time_remaining_sec) {
-    old_time_remaining_sec = time_remaining_sec;
-    ms_left = 1000;
-    time_remaining_sec_change_time_ms = millis();
-    // VALIDITY CHECK: Check that the time_remaining_sec variable has changed
-    // within the last 2 seconds, if it hasn't then something got stuck,
-    // probably due to not reading the RTC correctly.
-    // if (millis() - time_remaining_sec_change_time_ms > 2000) {
-    //   serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
-    //                    "over 2sec. Reseting...");
-    //   NVIC_SystemReset();
-    // }
-    // Blink colons when the seconds digit changes
-    display.colonOnSingle(2);
-    display.colonOnSingle(3);
-    display.colonOnSingle(4);
-  } else {
-    ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
-    // Clamp ms_left to (0,1000)
-    ms_left = ms_left < 0 ? 0 : ms_left;
-  }
+  // uint32_t ms_left;
+  // // Basically, reset ms_left when sec_left has changed.
+  // if (time_remaining_sec != old_time_remaining_sec) {
+  //   old_time_remaining_sec = time_remaining_sec;
+  //   ms_left = 1000;
+  //   time_remaining_sec_change_time_ms = millis();
+  //   // VALIDITY CHECK: Check that the time_remaining_sec variable has changed
+  //   // within the last 2 seconds, if it hasn't then something got stuck,
+  //   // probably due to not reading the RTC correctly.
+  //   // if (millis() - time_remaining_sec_change_time_ms > 2000) {
+  //   //   serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
+  //   //                    "over 2sec. Reseting...");
+  //   //   NVIC_SystemReset();
+  //   // }
+  //   // Blink colons when the seconds digit changes
+  //   display.colonOnSingle(2);
+  //   display.colonOnSingle(3);
+  //   display.colonOnSingle(4);
+  // } else {
+  //   ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
+  //   // Clamp ms_left to (0,1000)
+  //   ms_left = ms_left < 0 ? 0 : ms_left;
+  // }
 
   // Format output string
   // Format: yy,ww,d,hh,mm,ss,ms
@@ -547,25 +547,28 @@ void rtc_counter() {
     To get ASCII number of a digit just add the digit to '0' char.
   */
   char output_str[16];  // Output display is 16 characters long.
-  output_str[0] = 0xFF; // Display all segments
-  output_str[1] = 0xFF; // Display all segments
+  uint32_t output_str_i = 0;
+  output_str[output_str_i++] = 0xFF; // Display all segments
+  output_str[output_str_i++] = 0xFF; // Display all segments
+  output_str[output_str_i++] = 0xFF; // Display all segments
+  output_str[output_str_i++] = 0xFF; // Display all segments
 
   // Format years
   if (yrs_left < 10) {
-    output_str[2] = '0' + 0;
-    output_str[3] = '0' + yrs_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + yrs_left;
   } else {
-    output_str[2] = '0' + yrs_left / 10;
-    output_str[3] = '0' + yrs_left % 10;
+    output_str[output_str_i++] = '0' + yrs_left / 10;
+    output_str[output_str_i++] = '0' + yrs_left % 10;
   }
 
   // Format months
   if (mo_left < 10) {
-    output_str[4] = '0' + 0;
-    output_str[5] = '0' + mo_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + mo_left;
   } else {
-    output_str[4] = '0' + mo_left / 10;
-    output_str[5] = '0' + mo_left % 10;
+    output_str[output_str_i++] = '0' + mo_left / 10;
+    output_str[output_str_i++] = '0' + mo_left % 10;
   }
 
   // Format weeks
@@ -579,46 +582,46 @@ void rtc_counter() {
 
   // Format days
   if (days_left < 10) {
-    output_str[6] = '0' + 0;
-    output_str[7] = '0' + days_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + days_left;
   } else {
-    output_str[6] = '0' + days_left / 10;
-    output_str[7] = '0' + days_left % 10;
+    output_str[output_str_i++] = '0' + days_left / 10;
+    output_str[output_str_i++] = '0' + days_left % 10;
   }
 
   // Format hours
   if (hrs_left < 10) {
-    output_str[8] = '0' + 0;
-    output_str[9] = '0' + hrs_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + hrs_left;
   } else {
-    output_str[8] = '0' + hrs_left / 10;
-    output_str[9] = '0' + hrs_left % 10;
+    output_str[output_str_i++] = '0' + hrs_left / 10;
+    output_str[output_str_i++] = '0' + hrs_left % 10;
   }
   // Format minutes
   if (mins_left < 10) {
-    output_str[10] = '0' + 0;
-    output_str[11] = '0' + mins_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + mins_left;
   } else {
-    output_str[10] = '0' + mins_left / 10;
-    output_str[11] = '0' + mins_left % 10;
+    output_str[output_str_i++] = '0' + mins_left / 10;
+    output_str[output_str_i++] = '0' + mins_left % 10;
   }
   // Format seconds
   if (sec_left < 10) {
-    output_str[12] = '0' + 0;
-    output_str[13] = '0' + sec_left;
+    output_str[output_str_i++] = '0' + 0;
+    output_str[output_str_i++] = '0' + sec_left;
   } else {
-    output_str[12] = '0' + sec_left / 10;
-    output_str[13] = '0' + sec_left % 10;
+    output_str[output_str_i++] = '0' + sec_left / 10;
+    output_str[output_str_i++] = '0' + sec_left % 10;
   }
   // Format milliseconds
-  int ms_left_div_10 = ms_left / 10;
-  if (ms_left_div_10 < 10) {
-    output_str[14] = '0' + 0;
-    output_str[15] = '0' + ms_left_div_10;
-  } else {
-    output_str[14] = '0' + ms_left_div_10 / 10;
-    output_str[15] = '0' + ms_left_div_10 % 10;
-  }
+  // int ms_left_div_10 = ms_left / 10;
+  // if (ms_left_div_10 < 10) {
+  //   output_str[14] = '0' + 0;
+  //   output_str[15] = '0' + ms_left_div_10;
+  // } else {
+  //   output_str[14] = '0' + ms_left_div_10 / 10;
+  //   output_str[15] = '0' + ms_left_div_10 % 10;
+  // }
 
   // Update display
   if (millis() - last_display_update_time_ms > 10) {
