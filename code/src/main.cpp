@@ -4,11 +4,11 @@
 
 #define Error_Handler() _Error_Handler(__FILE__, __LINE__)
 
-TwoWire i2c1_bus(PB7, PB6); // SDA, SCL
-TwoWire i2c2_bus(PB4, PA7); // SDA, SCL
+TwoWire rtc_i2c_bus(PB7, PB6); // SDA, SCL
+TwoWire display_i2c_bus(PB4, PA7); // SDA, SCL
 HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
-DS3231 rtc(i2c1_bus);
+DS3231 rtc(rtc_i2c_bus);
 
 // Last RTC read
 bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
@@ -666,14 +666,12 @@ void set_datetime(int year, int month, int date, int hr, int min, int sec) {
 }
 
 bool init_display() {
-
   serialUSB.printf("Running init_display()...\r\n");
-  while (display.begin(0x70, 0x71, 0x72, 0x73, i2c2_bus) == false) {
+  while (display.begin(0x70, 0x71, 0x72, 0x73, display_i2c_bus) == false) {
     serialUSB.printf("Display did not acknowledge! Reseting...\r\n");
     return false;
   }
   serialUSB.printf("Display acknowledged.\r\n");
-
   if (!display.setBrightness(1)) {
     return false;
   }
@@ -681,19 +679,17 @@ bool init_display() {
     return false;
   }
   display.displayOn();
-  // current_draw_test();
-  display.printf("JOHN IS SO HOT");
   return true;
 }
 
 void initI2C() {
-  i2c1_bus.begin();
-  i2c1_bus.setClock(100000);
-  i2c1_bus.setTimeout(100);
+  rtc_i2c_bus.begin();
+  rtc_i2c_bus.setClock(100000);
+  rtc_i2c_bus.setTimeout(100);
 
-  i2c2_bus.begin();
-  i2c2_bus.setClock(100000);
-  i2c2_bus.setTimeout(100);
+  display_i2c_bus.begin();
+  display_i2c_bus.setClock(100000);
+  display_i2c_bus.setTimeout(100);
 }
 
 void setup() {
@@ -720,7 +716,7 @@ void setup() {
 
   // Read RTC
   get_RTC_datetime();
-  // set_datetime(2022, 11, 1, 18, 34, 0);
+  // set_datetime(2022, 12, 25, 13, 44, 0);
 }
 
 void displayFakeColon(uint8_t digit) {
