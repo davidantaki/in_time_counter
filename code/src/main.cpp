@@ -533,7 +533,7 @@ bool rtc_counter() {
   // Try to recover.
   if (rtc.getYear() + 1970 < 2021) {
     serialUSB.printf("ERROR: RTC Year is off\r\n");
-    NVIC_SystemReset();
+    success = false;
   }
 
   return success;
