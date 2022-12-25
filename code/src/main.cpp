@@ -238,6 +238,8 @@ uint32_t get_num_days_in_mo(uint32_t mo, uint32_t yr) {
   }else{
     Error_Handler();
   }
+  // Should never get here
+  return 0;
 }
 
 uint32_t secondsToMonthsIncludingLeapYear(bool leapYear, uint32_t seconds) {
@@ -324,7 +326,7 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
     temp_end_yr--;
   }
   uint32_t num_leap_yrs = 0;
-  for (int i = temp_start_yr; i <= temp_end_yr; i++) {
+  for (uint32_t i = temp_start_yr; i <= temp_end_yr; i++) {
     if (i % 4 == 0) {
       num_leap_yrs++;
     }
@@ -373,8 +375,8 @@ bool rtc_counter() {
   // Get years left
   // Divide by number of seconds in a year, etc.
   uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
-  uint32_t leap_yrs_left = get_num_leap_years_btw_dates(
-      curr_datetime.year(), curr_datetime.month(), curr_datetime.day(), death_date.year(), death_date.month(), death_date.day());
+  // uint32_t leap_yrs_left = get_num_leap_years_btw_dates(
+  //     curr_datetime.year(), curr_datetime.month(), curr_datetime.day(), death_date.year(), death_date.month(), death_date.day());
   time_remaining_sec_temp -= yrs_left * 365 * 24 * 60 * 60;
   // ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
                             //  (leap_yrs_left * 366 * 24 * 60 * 60);
