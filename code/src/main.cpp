@@ -10,6 +10,8 @@ HT16K33 display;
 HardwareSerial serialUSB(PA3, PA2); // rx, tx
 DS3231 rtc(rtc_i2c_bus);
 
+static const uint32_t LOOP_TIME_MS = 500;
+
 // Last RTC read
 bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
 uint32_t last_rtc_yr;
@@ -368,9 +370,9 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
  * Compare to https://www.tickcounter.com/
  */
 void rtc_counter() {
-  delay(500); // loop time
-  static int last_serialUSB_print_time;
-  static int time_remaining_sec_change_time_ms;
+  delay(LOOP_TIME_MS); // loop time
+  static uint32_t last_serialUSB_print_time;
+  static uint32_t time_remaining_sec_change_time_ms;
   static uint32_t old_time_remaining_sec = 0;
   static uint32_t last_display_update_time_ms;
 
