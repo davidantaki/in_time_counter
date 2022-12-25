@@ -670,6 +670,13 @@ void loop() {
   for(int i = 1; i <= 4; i++) {
     success = success && display.isConnected(i);
   }
+
+  // Reset every couple of minutes
+  if(millis() > 5 * 60 * 1000) {
+    serialUSB.printf("Resetting...\r\n");
+    NVIC_SystemReset();
+  }
+  
   IWatchdog.reload();
   
   // Print stuff
