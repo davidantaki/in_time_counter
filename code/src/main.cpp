@@ -509,11 +509,11 @@ void rtc_counter() {
         "%u min_left: %u sec_left: %u\r\n",
         millis(), yrs_left, mo_left, days_left, hrs_left, mins_left, sec_left);
 
-    // serialUSB.printf(
-    //     "millis(): %u yrs_left: %u wks_left: %u days_left: %u hrs_left: "
-    //     "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
-    //     millis(), yrs_left, wks_left, days_left, hrs_left, mins_left,
-    //     sec_left, ms_left_div_10);
+    serialUSB.printf(
+        "millis(): %u yrs_left: %u mo_left: %u days_left: %u hrs_left: "
+        "%u min_left: %u sec_left: %u ms_left_div_10: %u\r\n",
+        millis(), yrs_left, mo_left, days_left, hrs_left, mins_left,
+        sec_left);
 
     // serialUSB.printf("Current DateTime (Internal Clock): %u:%u:%u %u:%u:%u\r\n",
     //                  curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
@@ -524,10 +524,10 @@ void rtc_counter() {
   // Check RTC datetime.
   // If the year is off, then we might have lost I2C connect to RTC.
   // Try to recover.
-//   if (rtc.getYear() + 1970 < 2021) {
-//     serialUSB.printf("ERROR: RTC Year is off\r\n");
-//     NVIC_SystemReset();
-//   }
+  if (rtc.getYear() + 1970 < 2021) {
+    serialUSB.printf("ERROR: RTC Year is off\r\n");
+    NVIC_SystemReset();
+  }
 }
 
 void counter_mode() {
