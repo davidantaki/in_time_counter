@@ -13,14 +13,8 @@ DS3231 rtc(rtc_i2c_bus);
 static const uint32_t LOOP_TIME_MS = 500;
 
 // Last RTC read
-bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
-uint32_t last_rtc_yr;
-uint32_t last_rtc_mo;
-uint32_t last_rtc_day;
-uint32_t last_rtc_hr;
-uint32_t last_rtc_min;
-uint32_t last_rtc_sec;
-uint32_t last_rtc_read_ms;
+DateTime last_rtc_read;
+uint32_t last_rtc_read_since_program_start_ms = 0;
 
 // Birth Day
 static const uint32_t birth_yr = 2000;
@@ -44,16 +38,28 @@ void _Error_Handler(const char *msg, int val) {
 
 void get_RTC_datetime() {
   // Get current date time
-  last_rtc_yr = 1970 + rtc.getYear();
-  last_rtc_mo = rtc.getMonth(last_rtc_century);
-  last_rtc_day = rtc.getDate();
-  last_rtc_hr = rtc.getHour(last_rtc_h12, last_rtc_pm_time);
-  last_rtc_min = rtc.getMinute();
-  last_rtc_sec = rtc.getSecond();
-  last_rtc_read_ms = millis();
+  bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
+  uint32_t last_rtc_yr = 1970 + rtc.getYear();
+  uint32_t last_rtc_mo = rtc.getMonth(last_rtc_century);
+  uint32_t last_rtc_day = rtc.getDate();
+  uint32_t last_rtc_hr = rtc.getHour(last_rtc_h12, last_rtc_pm_time);
+  if(last_rtc_h12 && last_rtc_pm_time) {
+    last_rtc_hr += 12;
+  }
+  uint32_t last_rtc_min = rtc.getMinute();
+  uint32_t last_rtc_sec = rtc.getSecond();
+
+  // Store the last read time since program start.
+  last_rtc_read_since_program_start_ms = millis();
+
+  // Store the last RTC read in a DateTime object.
+  last_rtc_read = DateTime(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
+                          last_rtc_min, last_rtc_sec);
+
+  serialUSB.printf("DateTime: %u\n\r", last_rtc_read.unixtime());
   serialUSB.printf(
-      "RTC initial read: last_rtc_yr(): %d\tlast_rtc_mo: %d\tlast_rtc_day: "
-      "%d\tlast_rtc_min: %d\tlast_rtc_sec: %d\n\r",
+      "get_RTC_datetime(): last_rtc_yr: %u\tlast_rtc_mo: %u\tlast_rtc_day: last_rtc_hr: %u\t"
+      "%u\tlast_rtc_min: %u\tlast_rtc_sec: %u\n\r",
       last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
       last_rtc_sec);
 }
@@ -64,6 +70,7 @@ Don't think the 4th turned on because not enough power.
 */
 void current_draw_test() { display.write("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"); }
 
+// Given a date and seconds, return the new date.
 void add_sec_to_date(uint32_t yr, uint32_t mo, uint32_t day, uint32_t hr,
                      uint32_t min, uint32_t sec, uint32_t add_sec,
                      uint32_t *ret_yr, uint32_t *ret_mo, uint32_t *ret_day,
@@ -328,29 +335,18 @@ uint32_t get_num_leap_years_btw_dates(uint32_t start_yr, uint32_t start_mo,
 void rtc_counter() {
   delay(LOOP_TIME_MS); // loop time
   static uint32_t last_serialUSB_print_time;
-  static uint32_t time_remaining_sec_change_time_ms;
-  static uint32_t old_time_remaining_sec = 0;
   static uint32_t last_display_update_time_ms;
 
   // Calculate expected death date
-  static uint32_t death_yr = birth_yr + useful_lifetime_age;
-  static uint32_t death_mo = birth_mo;
-  static uint32_t death_day = birth_day;
-  static uint32_t death_hr = 12;
-  static uint32_t death_min = 0;
-  static uint32_t death_sec = 0;
-
-  uint32_t curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec;
-  add_sec_to_date(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
-                  last_rtc_min, last_rtc_sec,
-                  (millis() - last_rtc_read_ms) / 1000, &curr_yr, &curr_mo,
-                  &curr_day, &curr_hr, &curr_min, &curr_sec);
+  static const DateTime death_date(birth_yr + useful_lifetime_age, birth_mo, birth_day, 12,
+                                   0, 0);
 
   /*
   Calc time remaining in life in seconds
-  To this by:
-  Convert the last read of the RTC to seconds.
-  Add the number of seconds since the last RTC read.
+  Do this by:
+  Get the last RTC read since epoch in sec.
+  Add the number of seconds since the last RTC read to the last RTC read
+  to get the current time since epoch in sec.
   -----
   Get death time since epoch in sec.
   -----
@@ -358,32 +354,29 @@ void rtc_counter() {
   Put into our desired display format of yrs, weks, days, hrs, mins, secs,
   ms yy,ww,d,hh,mm,ss,ms
   */
-  uint32_t last_RTC_read_since_epoch_sec =
-      get_sec_since_epoch(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
-                          last_rtc_min, last_rtc_sec);
-  uint32_t curr_time_since_epoch_sec =
-      last_RTC_read_since_epoch_sec + ((millis() - last_rtc_read_ms) / 1000);
-  uint32_t death_time_since_epoch_sec = get_sec_since_epoch(
-      death_yr, death_mo, death_day, death_hr, death_min, death_sec);
-  // uint32_t curr_time_since_epoch_sec = get_sec_since_epoch(
-  //     curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
-  // serialUSB.printf("curr_time_since_epoch_sec: %d\r\n",
-  //                  curr_time_since_epoch_sec);
-  const uint32_t time_remaining_sec =
-      death_time_since_epoch_sec - curr_time_since_epoch_sec;
+  const uint32_t last_RTC_read_since_epoch_sec = last_rtc_read.unixtime();
+  const uint32_t curr_time_since_epoch_sec =
+      last_RTC_read_since_epoch_sec + ((millis() - last_rtc_read_since_program_start_ms) / 1000);
+  const DateTime curr_datetime = DateTime(curr_time_since_epoch_sec);
+  const uint32_t death_time_since_epoch_sec = death_date.unixtime();
+  serialUSB.printf("death_time_since_epoch_sec: %u\r\n", death_time_since_epoch_sec);
+  const uint32_t time_remaining_sec = death_time_since_epoch_sec - curr_time_since_epoch_sec;
+  serialUSB.printf("time_remaining_sec: %u\r\n", time_remaining_sec);
 
   // Put time into new format
   uint32_t time_remaining_sec_temp = time_remaining_sec;
+
+  // Get years left
   // Divide by number of seconds in a year, etc.
   uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
   uint32_t leap_yrs_left = get_num_leap_years_btw_dates(
-      curr_yr, curr_mo, curr_day, death_yr, death_mo, death_day);
+      curr_datetime.year(), curr_datetime.month(), curr_datetime.day(), death_date.year(), death_date.month(), death_date.day());
   time_remaining_sec_temp -= ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
                              (leap_yrs_left * 366 * 24 * 60 * 60);
 
-  uint32_t mo_left = secondsToMonthsIncludingLeapYear(isLeapYear(curr_yr), time_remaining_sec_temp);
+  uint32_t mo_left = secondsToMonthsIncludingLeapYear(isLeapYear(curr_datetime.year()), time_remaining_sec_temp);
   // time_remaining_sec_temp / (30 * 24 * 60 * 60);
-  time_remaining_sec_temp -= mo_left_in_year_to_sec2(mo_left, curr_yr);
+  time_remaining_sec_temp -= mo_left_in_year_to_sec2(mo_left, curr_datetime.year());
 
   // uint32_t wks_left = time_remaining_sec_temp / (7 * 24 * 60 * 60);
   // time_remaining_sec_temp -= wks_left * 7 * 24 * 60 * 60;
@@ -569,8 +562,8 @@ void rtc_counter() {
     //     millis(), yrs_left, wks_left, days_left, hrs_left, mins_left,
     //     sec_left, ms_left_div_10);
 
-    serialUSB.printf("Current DateTime (Internal Clock): %u:%u:%u %u:%u:%u\r\n",
-                     curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
+    // serialUSB.printf("Current DateTime (Internal Clock): %u:%u:%u %u:%u:%u\r\n",
+    //                  curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec);
 
     serialUSB.printf("Output String: %s\r\n", output_str);
   }
@@ -578,10 +571,10 @@ void rtc_counter() {
   // Check RTC datetime.
   // If the year is off, then we might have lost I2C connect to RTC.
   // Try to recover.
-  if (rtc.getYear() + 1970 < 2021) {
-    serialUSB.printf("ERROR: RTC Year is off\r\n");
-    NVIC_SystemReset();
-  }
+//   if (rtc.getYear() + 1970 < 2021) {
+//     serialUSB.printf("ERROR: RTC Year is off\r\n");
+//     NVIC_SystemReset();
+//   }
 }
 
 void counter_mode() {
@@ -665,7 +658,7 @@ void setup() {
 
   // Read RTC
   get_RTC_datetime();
-  // set_datetime(2022, 12, 25, 13, 44, 0);
+  // set_datetime(2022, 12, 25, 14, 39, 0);
 }
 
 void displayFakeColon(uint8_t digit) {
@@ -678,20 +671,20 @@ void loop() {
   // loading();
 
   // Periodically Reset
-  if (millis() - last_rtc_read_ms > 1000 * 60 * 1) {
-    NVIC_SystemReset();
-  }
+  // if (millis() - last_rtc_read_ms > 1000 * 60 * 1) {
+  //   NVIC_SystemReset();
+  // }
 
   // Print stuff
-  static int last_print_time;
-  if (millis() - last_print_time > 1000) {
-    last_print_time = millis();
-    serialUSB.printf("main loop\r\n");
-    print_rtc_date_and_time();
-    serialUSB.printf(
-        "Last RTC Read %d/%d/%d %d:%d:%d 12hr: "
-        "0x%X pm_time: 0x%X\r\n-------------------------------------\r\n",
-        last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
-        last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
-  }
+  // static int last_print_time;
+  // if (millis() - last_print_time > 1000) {
+  //   last_print_time = millis();
+  //   serialUSB.printf("main loop\r\n");
+  //   print_rtc_date_and_time();
+  //   serialUSB.printf(
+  //       "Last RTC Read %d/%d/%d %d:%d:%d 12hr: "
+  //       "0x%X pm_time: 0x%X\r\n-------------------------------------\r\n",
+  //       last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
+  //       last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
+  // }
 }
