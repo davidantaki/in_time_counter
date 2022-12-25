@@ -340,14 +340,6 @@ void rtc_counter() {
   static uint32_t death_min = 0;
   static uint32_t death_sec = 0;
 
-  // Get current date time
-  bool century, h12, pm_time;
-  // uint32_t curr_yr = 1970 + rtc.getYear();
-  // uint32_t curr_mo = rtc.getMonth(century);
-  // uint32_t curr_day = rtc.getDate();
-  // uint32_t curr_hr = rtc.getHour(h12, pm_time);
-  // uint32_t curr_min = rtc.getMinute();
-  // uint32_t curr_sec = rtc.getSecond();
   uint32_t curr_yr, curr_mo, curr_day, curr_hr, curr_min, curr_sec;
   add_sec_to_date(last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr,
                   last_rtc_min, last_rtc_sec,
