@@ -621,13 +621,7 @@ void displayFakeColon(uint8_t digit) {
 
 void loop() {
   counter_mode();
-  // loading();
-
-  // Periodically Reset
-  // if (millis() - last_rtc_read_ms > 1000 * 60 * 1) {
-  //   NVIC_SystemReset();
-  // }
-
+  
   // Print stuff
   // static int last_print_time;
   // if (millis() - last_print_time > 1000) {
