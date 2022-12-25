@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <DS3231.h>
 #include <SparkFun_Alphanumeric_Display.h>
+#include <IWatchdog.h>
 
 #define Error_Handler() _Error_Handler(__FILE__, __LINE__)
 
@@ -36,7 +37,9 @@ void _Error_Handler(const char *msg, int val) {
   }
 }
 
-void get_RTC_datetime() {
+bool get_RTC_datetime() {
+  bool success = true;
+
   // Get current date time
   bool last_rtc_century, last_rtc_h12, last_rtc_pm_time;
   uint32_t last_rtc_yr = 1970 + rtc.getYear();
@@ -62,6 +65,8 @@ void get_RTC_datetime() {
       "%u\tlast_rtc_min: %u\tlast_rtc_sec: %u\n\r",
       last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
       last_rtc_sec);
+
+  return success;
 }
 
 /*
@@ -561,23 +566,28 @@ void set_datetime(int year, int month, int date, int hr, int min, int sec) {
 }
 
 bool init_display() {
-  serialUSB.printf("Running init_display()...\r\n");
-  while (display.begin(0x70, 0x71, 0x72, 0x73, display_i2c_bus) == false) {
-    serialUSB.printf("Display did not acknowledge! Reseting...\r\n");
-    return false;
+  bool success = true;
+  serialUSB.printf("Initializing display...\r\n");
+  success = success && display.begin(0x70, 0x71, 0x72, 0x73, display_i2c_bus);
+
+  if(success) {
+    serialUSB.printf("Display connected.\r\n");
+    success = success && display.setBrightness(1);
+    success = success && display.clear();
+    success = success && display.displayOn();
   }
-  serialUSB.printf("Display acknowledged.\r\n");
-  if (!display.setBrightness(1)) {
-    return false;
+
+  if(success) {
+    serialUSB.printf("Display initialization SUCCEEDED.\r\n");
+  } else {
+    serialUSB.printf("Display initialization FAILED.\r\n");
   }
-  if (!display.clear()) {
-    return false;
-  }
-  display.displayOn();
-  return true;
+  return success;
 }
 
-void initI2C() {
+bool init_i2c_buses() {
+  bool success = true;
+
   rtc_i2c_bus.begin();
   rtc_i2c_bus.setClock(100000);
   rtc_i2c_bus.setTimeout(100);
@@ -585,33 +595,62 @@ void initI2C() {
   display_i2c_bus.begin();
   display_i2c_bus.setClock(100000);
   display_i2c_bus.setTimeout(100);
+
+  return success;
 }
 
-void setup() {
+bool init_watchdog_timer() {
+  bool success = true;
+  IWatchdog.begin(4000000);
+  return success;
+}
+
+bool init_console() {
+  bool success = true;
   serialUSB.begin(115200);
-  initI2C();
+  return success;
+}
 
-  if (!init_display()) {
-    serialUSB.printf("FAILED to init display. Reseting...\r\n");
-    delay(1000);
-    NVIC_SystemReset();
-  }
-
-  serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
+bool init_rtc() {
+  bool success = true;
 
   rtc.enable32kHz(false);
-  if (!rtc.oscillatorCheck()) {
+
+  bool oscCheck = rtc.oscillatorCheck();
+  serialUSB.printf("oscillatorCheck(): %d\r\n", oscCheck);
+
+  
+  if (!oscCheck) {
     serialUSB.printf("Oscillator is not enabled. Enabling...\r\n");
     // Turn on using battery
     rtc.enableOscillator(true, true, 3);
   } else {
     serialUSB.printf("Oscillator is enabled.\r\n");
   }
-  serialUSB.printf("oscillatorCheck(): %d\r\n", rtc.oscillatorCheck());
+  oscCheck = rtc.oscillatorCheck();
+  serialUSB.printf("oscillatorCheck(): %d\r\n", oscCheck);
 
-  // Read RTC
-  get_RTC_datetime();
+  success = success && oscCheck;
+
+  return success;
+}
+
+void setup() {
+  bool success = true;
+  success = success && init_console();
+  success = success && init_i2c_buses();
+  success = success && init_display();
+  success = success && init_rtc();
+  success = success && init_watchdog_timer();
+  success = success && get_RTC_datetime();
+
+  // Use the below to set the current date time if it has not be set yet.
   // set_datetime(2022, 12, 25, 14, 39, 0);
+
+  if(!success) {
+    serialUSB.printf("ERROR: Initialization failed. Resetting...\r\n");
+    NVIC_SystemReset();
+  }
 }
 
 void displayFakeColon(uint8_t digit) {
@@ -621,6 +660,7 @@ void displayFakeColon(uint8_t digit) {
 
 void loop() {
   counter_mode();
+  IWatchdog.reload();
   
   // Print stuff
   // static int last_print_time;
