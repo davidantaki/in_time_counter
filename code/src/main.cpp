@@ -618,9 +618,7 @@ bool init_console() {
 }
 
 bool init_rtc() {
-  bool success = true;
-  delay(1000);
-  
+  bool success = true;  
 
   bool oscCheck = rtc.oscillatorCheck();
   serialUSB.printf("oscillatorCheck(): %d\r\n", oscCheck);
@@ -630,7 +628,6 @@ bool init_rtc() {
     serialUSB.printf("Oscillator is not enabled. Enabling...\r\n");
     // Turn on using battery
     rtc.enableOscillator(true, true, 3);
-    delay(1000);
   } else {
     serialUSB.printf("Oscillator is enabled.\r\n");
   }
