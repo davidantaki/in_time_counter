@@ -412,29 +412,6 @@ void rtc_counter() {
     serialUSB.printf("sec_left: %d\n\r", sec_left);
     Error_Handler();
   }
-  // uint32_t ms_left;
-  // // Basically, reset ms_left when sec_left has changed.
-  // if (time_remaining_sec != old_time_remaining_sec) {
-  //   old_time_remaining_sec = time_remaining_sec;
-  //   ms_left = 1000;
-  //   time_remaining_sec_change_time_ms = millis();
-  //   // VALIDITY CHECK: Check that the time_remaining_sec variable has changed
-  //   // within the last 2 seconds, if it hasn't then something got stuck,
-  //   // probably due to not reading the RTC correctly.
-  //   // if (millis() - time_remaining_sec_change_time_ms > 2000) {
-  //   //   serialUSB.printf("ERROR: time_remaing_sec variable has not changed in "
-  //   //                    "over 2sec. Reseting...");
-  //   //   NVIC_SystemReset();
-  //   // }
-  //   // Blink colons when the seconds digit changes
-  //   display.colonOnSingle(2);
-  //   display.colonOnSingle(3);
-  //   display.colonOnSingle(4);
-  // } else {
-  //   ms_left = 1000 - (millis() - time_remaining_sec_change_time_ms);
-  //   // Clamp ms_left to (0,1000)
-  //   ms_left = ms_left < 0 ? 0 : ms_left;
-  // }
 
   // Format output string
   // Format: yy,ww,d,hh,mm,ss,ms
