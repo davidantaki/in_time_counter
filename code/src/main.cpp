@@ -64,50 +64,6 @@ Don't think the 4th turned on because not enough power.
 */
 void current_draw_test() { display.write("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t"); }
 
-void non_rtc_counter() {
-  int last_sec_left_ms_update_ms = 0;
-  int last_time_left_to_live_update_time_ms = 0;
-  int yrs_left = 70;
-  int wks_left = 52;
-  int days_left = 7;
-  int hrs_left = 24;
-  int min_left = 59;
-  int sec_left_ms = 60 * 1000;
-  int ms_left = 999;
-  uint64_t time_left_to_live_s = 70 * 365 * 24 * 60 * 60; // 70yrs
-
-  if (sec_left_ms <= 0) {
-    sec_left_ms = 59 * 1000;
-    min_left -= 1;
-    serialUSB.printf(
-        "millis(): %d\tyrs_left: %d\twks_left: %d\tdays_left: %d\thrs_left: "
-        "%d\tmin_left: %d\tsec_left_ms: %d\tms_left: %d\n",
-        millis(), yrs_left, wks_left, days_left, hrs_left, min_left,
-        sec_left_ms, ms_left);
-  }
-  if (min_left <= 0) {
-    min_left = 59;
-    hrs_left -= 1;
-  }
-  if (hrs_left <= 0) {
-    hrs_left = 24;
-    hrs_left -= 1;
-  }
-  if (min_left <= 0) {
-    min_left = 59;
-    hrs_left -= 1;
-  }
-
-  sec_left_ms -= millis() - last_sec_left_ms_update_ms;
-  last_sec_left_ms_update_ms = millis();
-
-  auto display_str = std::to_string(yrs_left);
-  // display.printf(display_str.c_str());
-  // serialUSB.printf(display_str.c_str());
-  display.printf("%d%d%d%d%d%d%d", yrs_left, wks_left, days_left, hrs_left,
-                 min_left, sec_left_ms);
-}
-
 void add_sec_to_date(uint32_t yr, uint32_t mo, uint32_t day, uint32_t hr,
                      uint32_t min, uint32_t sec, uint32_t add_sec,
                      uint32_t *ret_yr, uint32_t *ret_mo, uint32_t *ret_day,
