@@ -667,6 +667,9 @@ void loop() {
   bool success = true;
   delay(250);
   success = success && counter_mode();
+  for(int i = 1; i <= 4; i++) {
+    success = success && display.isConnected(i);
+  }
   IWatchdog.reload();
   
   // Print stuff
