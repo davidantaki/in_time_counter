@@ -595,11 +595,11 @@ bool init_i2c_buses() {
   bool success = true;
 
   rtc_i2c_bus.begin();
-  rtc_i2c_bus.setClock(100000);
+  rtc_i2c_bus.setClock(50000);
   rtc_i2c_bus.setTimeout(100);
 
   display_i2c_bus.begin();
-  display_i2c_bus.setClock(100000);
+  display_i2c_bus.setClock(50000);
   display_i2c_bus.setTimeout(100);
 
   return success;
@@ -649,7 +649,7 @@ void setup() {
   success = success && get_RTC_datetime();
 
   // Use the below to set the current date time if it has not be set yet.
-  // set_datetime(2022, 12, 25, 16, 56, 0);
+  // set_datetime(2022, 12, 25, 17, 12, 0);
 
   if(!success) {
     serialUSB.printf("ERROR: Initialization failed. Resetting...\r\n");
@@ -665,6 +665,7 @@ void displayFakeColon(uint8_t digit) {
 
 void loop() {
   bool success = true;
+  delay(250);
   success = success && counter_mode();
   IWatchdog.reload();
   
