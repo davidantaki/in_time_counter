@@ -371,8 +371,9 @@ void rtc_counter() {
   uint32_t yrs_left = time_remaining_sec_temp / (365 * 24 * 60 * 60);
   uint32_t leap_yrs_left = get_num_leap_years_btw_dates(
       curr_datetime.year(), curr_datetime.month(), curr_datetime.day(), death_date.year(), death_date.month(), death_date.day());
-  time_remaining_sec_temp -= ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
-                             (leap_yrs_left * 366 * 24 * 60 * 60);
+  time_remaining_sec_temp -= yrs_left * 365 * 24 * 60 * 60;
+  // ((yrs_left - leap_yrs_left) * 365 * 24 * 60 * 60) +
+                            //  (leap_yrs_left * 366 * 24 * 60 * 60);
 
   uint32_t mo_left = secondsToMonthsIncludingLeapYear(isLeapYear(curr_datetime.year()), time_remaining_sec_temp);
   // time_remaining_sec_temp / (30 * 24 * 60 * 60);
