@@ -56,45 +56,6 @@ void get_RTC_datetime() {
       last_rtc_sec);
 }
 
-void loading() {
-  display.illuminateChar(0b0000000000000001, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000000011, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000000111, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000001111, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000011111, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000111111, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000111110, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000111100, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000111000, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000110000, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000100000, 0);
-  display.updateDisplay();
-  delay(100);
-  display.illuminateChar(0b0000000000000000, 0);
-  display.updateDisplay();
-  delay(100);
-}
-
 /*
 3 displays with all segments on draws 0.572A.
 Don't think the 4th turned on because not enough power.
@@ -673,8 +634,6 @@ void rtc_counter() {
     NVIC_SystemReset();
   }
 }
-
-void john_is_so_hot_mode() { display.print("BEMILY IS SO HOT"); }
 
 void counter_mode() {
   // counter();
