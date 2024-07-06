@@ -680,16 +680,16 @@ void loop() {
   IWatchdog.reload();
   
   // Print stuff
-  // static int last_print_time;
-  // if (millis() - last_print_time > 1000) {
+  static int last_print_time;
+  // if (millis() - last_print_time > 10000) {
   //   last_print_time = millis();
   //   serialUSB.printf("main loop\r\n");
   //   print_rtc_date_and_time();
-  //   serialUSB.printf(
-  //       "Last RTC Read %d/%d/%d %d:%d:%d 12hr: "
-  //       "0x%X pm_time: 0x%X\r\n-------------------------------------\r\n",
-  //       last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
-  //       last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
+  //   // serialUSB.printf(
+  //   //     "Last RTC Read %d/%d/%d %d:%d:%d 12hr: "
+  //   //     "0x%X pm_time: 0x%X\r\n-------------------------------------\r\n",
+  //   //     last_rtc_yr, last_rtc_mo, last_rtc_day, last_rtc_hr, last_rtc_min,
+  //   //     last_rtc_sec, last_rtc_h12, last_rtc_pm_time);
   // }
 
   if(!success) {
